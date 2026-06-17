@@ -1,7 +1,15 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { Logo } from "./Logo";
-import { Flame, Home, Sparkles, Zap, Trophy, TrafficCone, Brain, Library } from "lucide-react";
+import { Flame, Home, Sparkles, Zap, Trophy, TrafficCone, Brain, Library, LogIn, LogOut, UserCircle, Shield } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const NAV = [
   { to: "/", label: "Início", icon: Home },
@@ -16,6 +24,9 @@ const NAV = [
 
 export function AppShell() {
   const { pathname } = useLocation();
+  const { user, signOut } = useAuth();
+
+  const activeAuth = pathname === "/auth" || pathname === "/admin";
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -50,11 +61,101 @@ export function AppShell() {
                 </Link>
               );
             })}
+
+            {/* Auth link / user menu */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className={`relative px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                    activeAuth
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}>
+                    <UserCircle className="h-4 w-4" />
+                    <span className="max-w-[120px] truncate">{user.email}</span>
+                    {activeAuth && (
+                      <motion.div
+                        layoutId="nav-pill"
+                        className="absolute inset-0 -z-10 rounded-lg bg-primary/15 border border-primary/30"
+                        transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                      />
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                      <Shield className="h-4 w-4" />
+                      Admin
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+                    <LogOut className="h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link
+                to="/auth"
+                className={`relative px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                  activeAuth
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <LogIn className="h-4 w-4" />
+                Entrar
+                {activeAuth && (
+                  <motion.div
+                    layoutId="nav-pill"
+                    className="absolute inset-0 -z-10 rounded-lg bg-primary/15 border border-primary/30"
+                    transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                  />
+                )}
+              </Link>
+            )}
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass">
-            <Flame className="h-4 w-4 text-warning" />
-            <span className="text-sm font-semibold">7</span>
-            <span className="text-xs text-muted-foreground">dias</span>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass">
+              <Flame className="h-4 w-4 text-warning" />
+              <span className="text-sm font-semibold">7</span>
+              <span className="text-xs text-muted-foreground">dias</span>
+            </div>
+            {/* Mobile auth button */}
+            <div className="md:hidden">
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+                      <UserCircle className="h-5 w-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                        <Shield className="h-4 w-4" />
+                        Admin
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+                      <LogOut className="h-4 w-4" />
+                      Sair
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link
+                  to="/auth"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <LogIn className="h-5 w-5" />
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -65,8 +166,8 @@ export function AppShell() {
 
       {/* Mobile nav */}
       <nav className="md:hidden sticky bottom-0 z-40 glass border-t border-border/40">
-        <div className="grid grid-cols-8">
-          {NAV.map((item) => {
+        <div className="grid grid-cols-9">
+          {[...NAV, { to: "/auth", label: user ? "Conta" : "Entrar", icon: user ? UserCircle : LogIn }].map((item) => {
             const active = pathname === item.to;
             const Icon = item.icon;
             return (
