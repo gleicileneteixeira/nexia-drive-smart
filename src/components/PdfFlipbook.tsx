@@ -1,16 +1,32 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 // @ts-ignore - react-pageflip lacks complete types
 import HTMLFlipBook from "react-pageflip";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Loader2 } from "lucide-react";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+// Bundle the worker locally so it always matches the installed pdfjs-dist version
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface Props {
   url: string;
 }
+
+const PageSheet = forwardRef<HTMLDivElement, { pageNumber: number; width: number }>(
+  ({ pageNumber, width }, ref) => (
+    <div ref={ref} className="bg-white overflow-hidden">
+      <Page
+        pageNumber={pageNumber}
+        width={width}
+        renderTextLayer={false}
+        renderAnnotationLayer={false}
+      />
+    </div>
+  ),
+);
+PageSheet.displayName = "PageSheet";
 
 export function PdfFlipbook({ url }: Props) {
   const [numPages, setNumPages] = useState<number>(0);
@@ -20,8 +36,10 @@ export function PdfFlipbook({ url }: Props) {
   useEffect(() => {
     function update() {
       if (!containerRef.current) return;
-      const w = Math.min(containerRef.current.clientWidth, 900);
-      const pageW = Math.floor(w / 2);
+      const cw = containerRef.current.clientWidth;
+      const isMobile = cw < 700;
+      // single page on mobile, two pages side-by-side on desktop
+      const pageW = isMobile ? Math.min(cw - 16, 480) : Math.min(Math.floor(cw / 2), 500);
       setSize({ w: pageW, h: Math.floor(pageW * 1.4) });
     }
     update();
@@ -34,32 +52,38 @@ export function PdfFlipbook({ url }: Props) {
       <Document
         file={url}
         onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-        loading={<div className="py-20 text-muted-foreground flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" />Carregando livro...</div>}
-        error={<p className="text-destructive py-10">Não foi possível carregar o PDF.</p>}
+        loading={
+          <div className="py-20 text-muted-foreground flex items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />Carregando livro...
+          </div>
+        }
+        error={
+          <div className="py-10 text-center">
+            <p className="text-destructive mb-3">Não foi possível carregar o PDF.</p>
+            <a href={url} target="_blank" rel="noreferrer" className="text-primary underline text-sm">
+              Abrir PDF em nova aba
+            </a>
+          </div>
+        }
       >
         {numPages > 0 && (
-          // @ts-ignore
+          // @ts-ignore — react-pageflip has incomplete types
           <HTMLFlipBook
             width={size.w}
             height={size.h}
-            size="fixed"
-            minWidth={200}
-            maxWidth={600}
-            minHeight={300}
-            maxHeight={840}
+            size="stretch"
+            minWidth={260}
+            maxWidth={1000}
+            minHeight={360}
+            maxHeight={1400}
             showCover
+            usePortrait
             mobileScrollSupport
-            className="shadow-2xl"
+            maxShadowOpacity={0.4}
+            className="shadow-2xl rounded-lg"
           >
             {Array.from({ length: numPages }, (_, i) => (
-              <div key={i} className="bg-white">
-                <Page
-                  pageNumber={i + 1}
-                  width={size.w}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                />
-              </div>
+              <PageSheet key={i} pageNumber={i + 1} width={size.w} />
             ))}
           </HTMLFlipBook>
         )}
