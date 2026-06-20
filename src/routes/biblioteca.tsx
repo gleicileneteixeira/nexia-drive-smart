@@ -85,10 +85,17 @@ function ItemCard({ item }: { item: LibraryItem }) {
   const typeLabel = item.item_type === "pdf" ? "Livrinho" : item.item_type === "heyzine" ? "Flipbook" : "Link";
 
   return (
-    <Link
-      to="/biblioteca/$id"
-      params={{ id: item.id }}
-      className="group block glass rounded-2xl overflow-hidden hover:bg-accent/30 transition-all hover:-translate-y-0.5 hover:shadow-glow h-full"
+    <a
+      href={item.is_paid ? undefined : item.url}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => {
+        if (item.is_paid) {
+          e.preventDefault();
+          alert("Conteúdo premium — em breve disponível para compra.");
+        }
+      }}
+      className="group block glass rounded-2xl overflow-hidden hover:bg-accent/30 transition-all hover:-translate-y-0.5 hover:shadow-glow h-full cursor-pointer"
     >
       <div className="aspect-[4/3] relative bg-gradient-to-br from-primary/20 to-primary-glow/20 overflow-hidden">
         {item.cover_url ? (
@@ -114,6 +121,6 @@ function ItemCard({ item }: { item: LibraryItem }) {
           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{item.description}</p>
         )}
       </div>
-    </Link>
+    </a>
   );
 }
