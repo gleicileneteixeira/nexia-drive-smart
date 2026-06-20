@@ -31,11 +31,11 @@ export function AppShell() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-40 glass border-b border-border/40">
-        <div className="mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
-          <Link to="/">
+        <div className="mx-auto max-w-6xl px-4 h-16 flex items-center justify-between gap-3">
+          <Link to="/" className="shrink-0">
             <Logo />
           </Link>
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-0.5 min-w-0 flex-1 justify-center">
             {NAV.map((item) => {
               const active = pathname === item.to;
               const Icon = item.icon;
@@ -43,13 +43,13 @@ export function AppShell() {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`relative px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                  className={`relative px-2 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                     active
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-4 w-4 shrink-0" />
                   {item.label}
                   {active && (
                     <motion.div
@@ -118,8 +118,8 @@ export function AppShell() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full glass whitespace-nowrap">
               <Flame className="h-4 w-4 text-warning" />
               <span className="text-sm font-semibold">7</span>
               <span className="text-xs text-muted-foreground">dias</span>
