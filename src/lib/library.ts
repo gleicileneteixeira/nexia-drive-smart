@@ -21,7 +21,17 @@ export async function fetchLibraryItems(includeUnpublished = false): Promise<Lib
   if (!includeUnpublished) q = q.eq("published", true);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as LibraryItem[];
+  const items = (data ?? []) as LibraryItem[];
+  await Promise.all(items.map(async (item) => {
+    if (item.cover_url) {
+      const path = extractStoragePath(item.cover_url);
+      if (path) {
+        const { data: signed } = await supabase.storage.from("library").createSignedUrl(path, 60 * 60 * 6);
+        if (signed?.signedUrl) item.cover_url = signed.signedUrl;
+      }
+    }
+  }));
+  return items;
 }
 
 export async function fetchLibraryItem(id: string): Promise<LibraryItem | null> {
@@ -35,6 +45,13 @@ export async function fetchLibraryItem(id: string): Promise<LibraryItem | null> 
     if (path) {
       const { data: signed } = await supabase.storage.from("library").createSignedUrl(path, 60 * 60 * 6);
       if (signed?.signedUrl) item.url = signed.signedUrl;
+    }
+  }
+  if (item.cover_url) {
+    const path = extractStoragePath(item.cover_url);
+    if (path) {
+      const { data: signed } = await supabase.storage.from("library").createSignedUrl(path, 60 * 60 * 6);
+      if (signed?.signedUrl) item.cover_url = signed.signedUrl;
     }
   }
   return item;
