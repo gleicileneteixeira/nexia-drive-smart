@@ -397,7 +397,7 @@ function Palografico({
   useEffect(() => {
     if (phase !== "intro") return;
     speech.speak(
-      "Teste dos risquinhos, também chamado palográfico. Você verá três traços de modelo no topo. Repita o padrão livremente na folha em branco abaixo, o mais rápido e constante possível. Em celular, gire para o modo horizontal para ter mais espaço. Toque em iniciar quando estiver pronto.",
+      "Teste dos risquinhos, também chamado palográfico. Você verá três traços de modelo no topo. Repita o padrão livremente na folha em branco abaixo, o mais rápido e constante possível. Mantenha o celular na vertical. Toque em iniciar quando estiver pronto.",
     );
   }, [phase, speech]);
 
@@ -449,7 +449,7 @@ function Palografico({
             "Sem linhas guia: desenhe livremente na folha em branco.",
             "Ritmo ideal: cerca de 1 traço por segundo.",
             "São 6 rodadas; a tela limpa ao trocar de rodada.",
-            "Em celular, prefira o modo horizontal para mais espaço.",
+            "Use o celular na vertical — a área já se ajusta sozinha.",
           ]}
           onStart={() => {
             speech.stop();
@@ -461,7 +461,7 @@ function Palografico({
             setPhase("running");
           }}
           speech={speech}
-          replayText="Repita os três risquinhos do modelo com o dedo, na folha em branco. Em celular, gire para a horizontal."
+          replayText="Repita os três risquinhos do modelo com o dedo, na folha em branco. Mantenha o celular na vertical."
         />
       )}
 
