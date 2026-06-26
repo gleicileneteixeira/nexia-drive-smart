@@ -1777,7 +1777,9 @@ function Result({
           title="Risquinhos (palográfico)"
           lines={[
             `Traços totais: ${scores.palografico?.strokes ?? 0}`,
-            `Linhas concluídas: ${scores.palografico?.lines ?? 0}`,
+            `Rodadas concluídas: ${scores.palografico?.lines ?? 0}`,
+            `Largura média: ${Math.round(scores.palografico?.avgWidth ?? 0)} px`,
+            `Altura média: ${Math.round(scores.palografico?.avgHeight ?? 0)} px`,
             `Constância: ${Math.round(scores.palografico?.consistency ?? 0)}%`,
           ]}
         />
