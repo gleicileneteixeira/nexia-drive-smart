@@ -276,13 +276,13 @@ function useDrawCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const rect = c.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    const prev = document.createElement("canvas");
-    prev.width = c.width;
-    prev.height = c.height;
-    const pctx = prev.getContext("2d");
-    if (pctx && c.width > 0) pctx.drawImage(c, 0, 0);
-    c.width = Math.floor(rect.width * dpr);
-    c.height = Math.floor(rect.height * dpr);
+    const targetW = Math.floor(rect.width * dpr);
+    const targetH = Math.floor(rect.height * dpr);
+    // Avoid re-init mid-draw or on noisy resize events (mobile URL bar)
+    if (c.width === targetW && c.height === targetH) return;
+    if (drawingRef.current) return;
+    c.width = targetW;
+    c.height = targetH;
     const ctx = c.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -290,29 +290,27 @@ function useDrawCanvas() {
     ctx.lineJoin = "round";
     ctx.lineWidth = 4;
     ctx.strokeStyle = "#0a0a0a";
-    if (prev.width > 0) {
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.drawImage(prev, 0, 0, c.width, c.height);
-      ctx.restore();
-    }
   }, []);
 
   useEffect(() => {
     setup();
-    const onResize = () => setup();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
-    };
+    const c = canvasRef.current;
+    if (!c || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setup());
+    ro.observe(c);
+    return () => ro.disconnect();
   }, [setup]);
 
   function pos(e: PointerEvent | React.PointerEvent) {
     const c = canvasRef.current!;
     const r = c.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+    // Scale CSS-pixel coords by any layout scaling (e.g. transforms)
+    const sx = r.width === 0 ? 1 : c.clientWidth / r.width;
+    const sy = r.height === 0 ? 1 : c.clientHeight / r.height;
+    return {
+      x: (e.clientX - r.left) * sx,
+      y: (e.clientY - r.top) * sy,
+    };
   }
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -399,7 +397,7 @@ function Palografico({
   useEffect(() => {
     if (phase !== "intro") return;
     speech.speak(
-      "Teste dos risquinhos, também chamado palográfico. Você verá três traços de modelo no topo. Repita o padrão livremente na folha em branco abaixo, o mais rápido e constante possível. Em celular, gire para o modo horizontal para ter mais espaço. Toque em iniciar quando estiver pronto.",
+      "Teste dos risquinhos, também chamado palográfico. Você verá três traços de modelo no topo. Repita o padrão livremente na folha em branco abaixo, o mais rápido e constante possível. Mantenha o celular na vertical. Toque em iniciar quando estiver pronto.",
     );
   }, [phase, speech]);
 
@@ -451,7 +449,7 @@ function Palografico({
             "Sem linhas guia: desenhe livremente na folha em branco.",
             "Ritmo ideal: cerca de 1 traço por segundo.",
             "São 6 rodadas; a tela limpa ao trocar de rodada.",
-            "Em celular, prefira o modo horizontal para mais espaço.",
+            "Use o celular na vertical — a área já se ajusta sozinha.",
           ]}
           onStart={() => {
             speech.stop();
@@ -463,16 +461,12 @@ function Palografico({
             setPhase("running");
           }}
           speech={speech}
-          replayText="Repita os três risquinhos do modelo com o dedo, na folha em branco. Em celular, gire para a horizontal."
+          replayText="Repita os três risquinhos do modelo com o dedo, na folha em branco. Mantenha o celular na vertical."
         />
       )}
 
       {phase === "running" && (
         <div>
-          <div className="md:hidden mb-2 text-[11px] text-warning bg-warning/10 border border-warning/30 rounded-lg px-3 py-1.5">
-            Dica: gire o celular na horizontal para uma área de desenho maior.
-          </div>
-
           <div className="flex items-center justify-between mb-3 text-sm">
             <span className="font-semibold">
               Rodada {line + 1}/{TOTAL_LINES}
@@ -509,8 +503,12 @@ function Palografico({
               onPointerUp={draw.onPointerUp}
               onPointerCancel={draw.onPointerUp}
               onPointerLeave={draw.onPointerUp}
-              className="w-full h-[60vh] min-h-[420px] touch-none block"
-              style={{ touchAction: "none" }}
+              className="w-full block touch-none select-none"
+              style={{
+                touchAction: "none",
+                aspectRatio: "3 / 4",
+                maxHeight: "70vh",
+              }}
             />
           </div>
 
