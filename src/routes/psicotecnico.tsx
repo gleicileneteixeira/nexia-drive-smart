@@ -35,7 +35,13 @@ export const Route = createFileRoute("/psicotecnico")({
 type Stage = "hub" | "palografico" | "atencao" | "memoria" | "logico" | "result";
 
 interface ScoreMap {
-  palografico?: { strokes: number; lines: number; consistency: number };
+  palografico?: {
+    strokes: number;
+    lines: number;
+    consistency: number;
+    avgWidth: number;
+    avgHeight: number;
+  };
   atencao?: { correct: number; total: number };
   memoria?: { items: number };
   logico?: { correct: number; total: number };
@@ -268,6 +274,9 @@ function useDrawCanvas() {
   const drawingRef = useRef(false);
   const lastRef = useRef<{ x: number; y: number } | null>(null);
   const strokeCountRef = useRef(0);
+  const strokesRef = useRef<
+    { minX: number; maxX: number; minY: number; maxY: number }[]
+  >([]);
   const [, force] = useState(0);
 
   const setup = useCallback(() => {
@@ -320,6 +329,7 @@ function useDrawCanvas() {
     const p = pos(e);
     lastRef.current = p;
     strokeCountRef.current += 1;
+    strokesRef.current.push({ minX: p.x, maxX: p.x, minY: p.y, maxY: p.y });
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx) {
       ctx.beginPath();
@@ -342,10 +352,17 @@ function useDrawCanvas() {
         : [native];
     ctx.beginPath();
     ctx.moveTo(lastRef.current.x, lastRef.current.y);
+    const stroke = strokesRef.current[strokesRef.current.length - 1];
     for (const ev of events) {
       const p = pos(ev);
       ctx.lineTo(p.x, p.y);
       lastRef.current = p;
+      if (stroke) {
+        if (p.x < stroke.minX) stroke.minX = p.x;
+        if (p.x > stroke.maxX) stroke.maxX = p.x;
+        if (p.y < stroke.minY) stroke.minY = p.y;
+        if (p.y > stroke.maxY) stroke.maxY = p.y;
+      }
     }
     ctx.stroke();
   };
@@ -364,6 +381,7 @@ function useDrawCanvas() {
     ctx.clearRect(0, 0, c.width, c.height);
     ctx.restore();
     strokeCountRef.current = 0;
+    strokesRef.current = [];
     force((n) => n + 1);
   };
 
@@ -374,6 +392,7 @@ function useDrawCanvas() {
     onPointerUp,
     clear,
     strokeCount: strokeCountRef.current,
+    strokesRef,
   };
 }
 
@@ -383,16 +402,25 @@ function Palografico({
   onDone,
 }: {
   speech: ReturnType<typeof useSpeech>;
-  onDone: (r: { strokes: number; lines: number; consistency: number }) => void;
+  onDone: (r: {
+    strokes: number;
+    lines: number;
+    consistency: number;
+    avgWidth: number;
+    avgHeight: number;
+  }) => void;
 }) {
   const TOTAL_LINES = 6;
   const SECS_PER_LINE = 8;
   const [phase, setPhase] = useState<"intro" | "running" | "done">("intro");
   const [line, setLine] = useState(0);
   const [time, setTime] = useState(SECS_PER_LINE);
-  const [perLine, setPerLine] = useState<number[]>([]);
+  const [perLine, setPerLine] = useState<
+    { count: number; avgW: number; avgH: number }[]
+  >([]);
   const draw = useDrawCanvas();
   const lastCountRef = useRef(0);
+  const strokeMarkerRef = useRef(0);
 
   useEffect(() => {
     if (phase !== "intro") return;
@@ -407,7 +435,20 @@ function Palografico({
       // próxima linha
       const count = draw.strokeCount - lastCountRef.current;
       lastCountRef.current = draw.strokeCount;
-      setPerLine((p) => [...p, count]);
+      const all = draw.strokesRef.current;
+      const slice = all.slice(strokeMarkerRef.current);
+      strokeMarkerRef.current = all.length;
+      const widths = slice.map((s) => s.maxX - s.minX);
+      const heights = slice.map((s) => s.maxY - s.minY);
+      const avgW =
+        widths.length > 0
+          ? widths.reduce((a, b) => a + b, 0) / widths.length
+          : 0;
+      const avgH =
+        heights.length > 0
+          ? heights.reduce((a, b) => a + b, 0) / heights.length
+          : 0;
+      setPerLine((p) => [...p, { count, avgW, avgH }]);
       if (line + 1 >= TOTAL_LINES) {
         setPhase("done");
         speech.speak("Tempo encerrado. Vamos para o próximo teste.");
@@ -417,6 +458,7 @@ function Palografico({
         setTime(SECS_PER_LINE);
         draw.clear();
         lastCountRef.current = 0;
+        strokeMarkerRef.current = 0;
       }
 
       return;
@@ -426,13 +468,28 @@ function Palografico({
   }, [phase, time, line, draw.strokeCount, speech]);
 
   function finish() {
-    const total = perLine.reduce((a, b) => a + b, 0);
-    const avg = total / Math.max(1, perLine.length);
+    const counts = perLine.map((p) => p.count);
+    const total = counts.reduce((a, b) => a + b, 0);
+    const avg = total / Math.max(1, counts.length);
     const variance =
-      perLine.reduce((acc, n) => acc + Math.pow(n - avg, 2), 0) /
-      Math.max(1, perLine.length);
+      counts.reduce((acc, n) => acc + Math.pow(n - avg, 2), 0) /
+      Math.max(1, counts.length);
     const consistency = Math.max(0, Math.min(100, 100 - Math.sqrt(variance) * 10));
-    onDone({ strokes: total, lines: perLine.length, consistency });
+    const avgWidth =
+      perLine.length > 0
+        ? perLine.reduce((a, b) => a + b.avgW, 0) / perLine.length
+        : 0;
+    const avgHeight =
+      perLine.length > 0
+        ? perLine.reduce((a, b) => a + b.avgH, 0) / perLine.length
+        : 0;
+    onDone({
+      strokes: total,
+      lines: perLine.length,
+      consistency,
+      avgWidth,
+      avgHeight,
+    });
   }
 
   return (
@@ -455,6 +512,7 @@ function Palografico({
             speech.stop();
             draw.clear();
             lastCountRef.current = 0;
+            strokeMarkerRef.current = 0;
             setPerLine([]);
             setLine(0);
             setTime(SECS_PER_LINE);
@@ -527,6 +585,7 @@ function Palografico({
               onClick={() => {
                 draw.clear();
                 lastCountRef.current = 0;
+                strokeMarkerRef.current = 0;
               }}
               className="px-4 py-2 rounded-xl glass text-sm"
             >
@@ -542,7 +601,16 @@ function Palografico({
 
       {phase === "done" && (
         <DoneNext
-          summary={`${perLine.reduce((a, b) => a + b, 0)} traços em ${perLine.length} linhas`}
+          summary={
+            `${perLine.reduce((a, b) => a + b.count, 0)} traços em ${perLine.length} rodadas · ` +
+            `largura média ${Math.round(
+              perLine.reduce((a, b) => a + b.avgW, 0) /
+                Math.max(1, perLine.length),
+            )}px · altura média ${Math.round(
+              perLine.reduce((a, b) => a + b.avgH, 0) /
+                Math.max(1, perLine.length),
+            )}px`
+          }
           onNext={finish}
         />
       )}
@@ -1709,7 +1777,9 @@ function Result({
           title="Risquinhos (palográfico)"
           lines={[
             `Traços totais: ${scores.palografico?.strokes ?? 0}`,
-            `Linhas concluídas: ${scores.palografico?.lines ?? 0}`,
+            `Rodadas concluídas: ${scores.palografico?.lines ?? 0}`,
+            `Largura média: ${Math.round(scores.palografico?.avgWidth ?? 0)} px`,
+            `Altura média: ${Math.round(scores.palografico?.avgHeight ?? 0)} px`,
             `Constância: ${Math.round(scores.palografico?.consistency ?? 0)}%`,
           ]}
         />
