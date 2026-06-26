@@ -397,7 +397,7 @@ function Palografico({
   useEffect(() => {
     if (phase !== "intro") return;
     speech.speak(
-      "Teste dos risquinhos, também chamado palográfico. Você verá três traços de modelo no topo. Repita o padrão livremente na folha em branco abaixo, o mais rápido e constante possível. Mantenha o celular na vertical. Toque em iniciar quando estiver pronto.",
+      "Teste dos risquinhos, também chamado palográfico. Você verá três traços de modelo no topo. Repita o padrão livremente na folha em branco abaixo, o mais rápido e constante possível. Gire o celular para a horizontal para ter mais espaço. Toque em iniciar quando estiver pronto.",
     );
   }, [phase, speech]);
 
@@ -449,7 +449,7 @@ function Palografico({
             "Sem linhas guia: desenhe livremente na folha em branco.",
             "Ritmo ideal: cerca de 1 traço por segundo.",
             "São 6 rodadas; a tela limpa ao trocar de rodada.",
-            "Use o celular na vertical — a área já se ajusta sozinha.",
+            "Em celular, gire para a horizontal para ter mais espaço.",
           ]}
           onStart={() => {
             speech.stop();
@@ -461,12 +461,16 @@ function Palografico({
             setPhase("running");
           }}
           speech={speech}
-          replayText="Repita os três risquinhos do modelo com o dedo, na folha em branco. Mantenha o celular na vertical."
+          replayText="Repita os três risquinhos do modelo com o dedo, na folha em branco. Gire o celular para a horizontal."
         />
       )}
 
       {phase === "running" && (
         <div>
+          <div className="md:hidden mb-2 text-[11px] text-warning bg-warning/10 border border-warning/30 rounded-lg px-3 py-1.5">
+            Dica: gire o celular na horizontal para uma área de desenho maior.
+          </div>
+
           <div className="flex items-center justify-between mb-3 text-sm">
             <span className="font-semibold">
               Rodada {line + 1}/{TOTAL_LINES}
@@ -506,7 +510,7 @@ function Palografico({
               className="w-full block touch-none select-none"
               style={{
                 touchAction: "none",
-                aspectRatio: "3 / 4",
+                aspectRatio: "16 / 9",
                 maxHeight: "70vh",
               }}
             />
