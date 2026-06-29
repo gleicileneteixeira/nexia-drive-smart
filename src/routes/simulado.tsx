@@ -37,6 +37,30 @@ export const Route = createFileRoute("/simulado")({
 
 const TOTAL = 30;
 const STORAGE_KEY = "nexia:simulado:v3";
+const SEEN_KEY = "nexia:simulado:seen:v1";
+
+function loadSeen(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SEEN_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+function saveSeen(ids: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify(ids));
+  } catch {}
+}
+function buildFresh(): Question[] {
+  const seen = loadSeen();
+  const fresh = getRandomizedQuestions(TOTAL, { exclude: seen, placasCount: 3 });
+  const newSeen = Array.from(new Set([...seen, ...fresh.map((q) => q.id)]));
+  saveSeen(newSeen);
+  return fresh;
+}
 
 interface PersistedState {
   questions: Question[];
@@ -95,7 +119,7 @@ function SimuladoPage() {
         setShowResult(true);
       }
     } else {
-      const fresh = getRandomizedQuestions(TOTAL);
+      const fresh = buildFresh();
       setQuestions(fresh);
       savePersisted({
         questions: fresh,
@@ -122,7 +146,7 @@ function SimuladoPage() {
 
   function restart() {
     clearPersisted();
-    const fresh = getRandomizedQuestions(TOTAL);
+    const fresh = buildFresh();
     setQuestions(fresh);
     setIndex(0);
     setSelected(null);
