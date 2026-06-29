@@ -1474,11 +1474,40 @@ export const QUESTIONS: Question[] = [
 
 export function getRandomizedQuestions(
   count: number,
-  opts?: { categories?: Category[]; seed?: number }
+  opts?: { categories?: Category[]; seed?: number; exclude?: string[]; placasCount?: number }
 ): Question[] {
-  const pool = opts?.categories?.length
+  let pool = opts?.categories?.length
     ? QUESTIONS.filter((q) => opts.categories!.includes(q.category))
     : [...QUESTIONS];
+
+  if (opts?.exclude?.length) {
+    const ex = new Set(opts.exclude);
+    const filtered = pool.filter((q) => !ex.has(q.id));
+    // se filtrou demais e não dá pra completar, libera os já vistos para evitar set vazio
+    if (filtered.length >= count) pool = filtered;
+    else if (filtered.length > 0) pool = filtered.concat(pool.filter((q) => ex.has(q.id)));
+  }
+
+  // Modo simulado: 3 placas + (count-3) demais categorias
+  if (opts?.placasCount && opts.placasCount > 0 && !opts.categories?.length) {
+    const placasPool = pool.filter((q) => q.category === "placas");
+    const restPool = pool.filter((q) => q.category !== "placas");
+    const pickWeighted = (arr: Question[], n: number) =>
+      arr
+        .map((q) => ({ q, s: Math.random() * INCIDENCE_META[q.incidence].weight }))
+        .sort((a, b) => b.s - a.s)
+        .slice(0, n)
+        .map((x) => x.q);
+    const placas = pickWeighted(placasPool, Math.min(opts.placasCount, placasPool.length));
+    const rest = pickWeighted(restPool, Math.max(0, count - placas.length));
+    const merged = [...placas, ...rest];
+    // embaralha posição final
+    for (let i = merged.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [merged[i], merged[j]] = [merged[j], merged[i]];
+    }
+    return merged.map(shuffleOptions);
+  }
 
   const weighted = pool
     .map((q) => ({
@@ -1490,14 +1519,16 @@ export function getRandomizedQuestions(
 
   const picked = weighted.slice(0, Math.min(count, weighted.length));
 
-  return picked.map((q) => {
-    const indices = q.options.map((_, i) => i);
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
-    const newOptions = indices.map((i) => q.options[i]);
-    const newCorrect = indices.indexOf(q.correctIndex);
-    return { ...q, options: newOptions, correctIndex: newCorrect };
-  });
+  return picked.map(shuffleOptions);
+}
+
+function shuffleOptions(q: Question): Question {
+  const indices = q.options.map((_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  const newOptions = indices.map((i) => q.options[i]);
+  const newCorrect = indices.indexOf(q.correctIndex);
+  return { ...q, options: newOptions, correctIndex: newCorrect };
 }
