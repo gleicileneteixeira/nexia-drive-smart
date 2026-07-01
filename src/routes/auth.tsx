@@ -18,6 +18,9 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [phone, setPhone] = useState("");
+  const [employment, setEmployment] = useState<"carteira_assinada" | "autonomo" | "nao_trabalha" | "">("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -31,22 +34,44 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        if (!name.trim() || !cpf.trim() || !phone.trim() || !employment) {
+          throw new Error("Preencha nome, CPF, telefone e vínculo de trabalho.");
+        }
+        const cpfDigits = cpf.replace(/\D/g, "");
+        if (cpfDigits.length !== 11) throw new Error("CPF deve conter 11 dígitos.");
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { display_name: name || email },
+            data: {
+              display_name: name || email,
+              cpf: cpfDigits,
+              phone,
+              employment_status: employment,
+            },
           },
         });
         if (error) throw error;
+        const userId = signUpData.user?.id;
+        if (userId) {
+          const { error: pErr } = await supabase.from("profiles").upsert({
+            id: userId,
+            display_name: name || email,
+            email,
+            cpf: cpfDigits,
+            phone,
+            employment_status: employment,
+          });
+          if (pErr) throw pErr;
+        }
         toast.success("Conta criada! Verifique seu email se necessário.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Bem-vinda de volta!");
       }
-      navigate({ to: "/admin" });
+      navigate({ to: "/simulado" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro";
       toast.error(message);
@@ -66,10 +91,49 @@ function AuthPage() {
         </p>
         <form onSubmit={onSubmit} className="space-y-4">
           {mode === "signup" && (
-            <div>
-              <Label htmlFor="name">Nome</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
+            <>
+              <div>
+                <Label htmlFor="name">Nome completo</Label>
+                <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  id="cpf"
+                  required
+                  inputMode="numeric"
+                  placeholder="Somente números"
+                  value={cpf}
+                  onChange={(e) => setCpf(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Telefone (WhatsApp)</Label>
+                <Input
+                  id="phone"
+                  required
+                  inputMode="tel"
+                  placeholder="(00) 00000-0000"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="employment">Vínculo de trabalho</Label>
+                <select
+                  id="employment"
+                  required
+                  value={employment}
+                  onChange={(e) => setEmployment(e.target.value as typeof employment)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm md:text-sm"
+                >
+                  <option value="">Selecione…</option>
+                  <option value="carteira_assinada">Carteira assinada</option>
+                  <option value="autonomo">Autônomo(a)</option>
+                  <option value="nao_trabalha">Não trabalho no momento</option>
+                </select>
+              </div>
+            </>
           )}
           <div>
             <Label htmlFor="email">Email</Label>
