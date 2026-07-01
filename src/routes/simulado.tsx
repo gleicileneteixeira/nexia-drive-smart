@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   getRandomizedQuestions,
@@ -98,6 +99,7 @@ function clearPersisted() {
 }
 
 function SimuladoPage() {
+  const { user, loading: authLoading } = useAuth();
   const [hydrated, setHydrated] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [index, setIndex] = useState(0);
@@ -162,6 +164,31 @@ function SimuladoPage() {
     });
   }
 
+  if (authLoading) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10 text-center text-muted-foreground">
+        Carregando…
+      </div>
+    );
+  }
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <div className="glass rounded-3xl p-8 shadow-card">
+          <h1 className="text-2xl font-display font-bold mb-2">Cadastre-se para começar</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            Para acessar o simulado, crie sua conta com nome, CPF, telefone e vínculo de trabalho.
+          </p>
+          <Link
+            to="/auth"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground shadow"
+          >
+            Entrar ou criar conta
+          </Link>
+        </div>
+      </div>
+    );
+  }
   if (!hydrated || !questions.length) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 text-center text-muted-foreground">
