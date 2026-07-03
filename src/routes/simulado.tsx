@@ -115,11 +115,12 @@ function SimuladoPage() {
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [resumed, setResumed] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   // Hidrata estado a partir do localStorage
   useEffect(() => {
     const persisted = loadPersisted();
-    if (persisted) {
+    if (persisted && persisted.questions?.length) {
       setQuestions(persisted.questions);
       setIndex(persisted.index);
       setSelected(persisted.selected);
@@ -129,15 +130,7 @@ function SimuladoPage() {
         setShowResult(true);
       }
     } else {
-      const fresh = buildFresh();
-      setQuestions(fresh);
-      savePersisted({
-        questions: fresh,
-        index: 0,
-        selected: null,
-        answers: [],
-        startedAt: Date.now(),
-      });
+      setShowPicker(true);
     }
     setHydrated(true);
   }, []);
@@ -154,22 +147,35 @@ function SimuladoPage() {
     });
   }, [hydrated, questions, index, selected, answers]);
 
-  function restart() {
+  function startWithMode(mode: "completo" | Category) {
     clearPersisted();
-    const fresh = buildFresh();
+    const fresh = buildFresh(mode === "completo" ? undefined : mode);
     setQuestions(fresh);
     setIndex(0);
     setSelected(null);
     setAnswers([]);
     setShowResult(false);
     setResumed(false);
+    setShowPicker(false);
     savePersisted({
       questions: fresh,
       index: 0,
       selected: null,
       answers: [],
       startedAt: Date.now(),
+      mode,
     });
+  }
+
+  function restart() {
+    clearPersisted();
+    setQuestions([]);
+    setIndex(0);
+    setSelected(null);
+    setAnswers([]);
+    setShowResult(false);
+    setResumed(false);
+    setShowPicker(true);
   }
 
   if (authLoading) {
