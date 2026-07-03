@@ -106,6 +106,24 @@ function clearPersisted() {
   } catch {}
 }
 
+// ---------- Gancho de memória: fallback automático quando a questão não traz um pronto ----------
+const CATEGORY_HOOKS: Record<Category, string> = {
+  legislacao: "Pense na sigla CTB → Código de Trânsito Brasileiro: toda regra nasce de um artigo. Ligue a resposta a uma imagem de placa + número do artigo.",
+  placas: "Formato + cor = função. Triângulo amarelo → advertência (avisa). Círculo vermelho → proibição (proíbe). Retângulo azul → indicação (informa).",
+  "direcao-defensiva": "Regra do 3S: Ver, Prever, Rever. Antes de agir, olhe, imagine o pior cenário e confira de novo. A resposta certa quase sempre é a mais cautelosa.",
+  "primeiros-socorros": "Prioridade PAS: Proteger, Avisar, Socorrer — nessa ordem. Nunca movimente vítima com suspeita de fratura na coluna.",
+  infracoes: "Ligue à mão: 3 pontos (leve), 4 (média), 5 (grave), 7 (gravíssima). Multiplicador só aparece em gravíssimas 'especiais' (álcool, racha, celular).",
+  "meio-ambiente": "Poluir = punir. Fumaça preta, buzina desnecessária e descarte irregular caem como infração ambiental. Associe à imagem de um cano soltando fumaça.",
+  mecanica: "Antes de girar a chave, faça o 'ABC': Água (radiador), Bateria e Combustível. Pneu e óleo entram no check semanal.",
+  prioridade: "Ordem de prioridade em cruzamento sem sinalização: 1) veículo na rotatória; 2) trilhos (trem/VLT); 3) quem vem pela direita.",
+};
+
+function getMemoryHook(q: Question): string {
+  if (q.memoryHook) return q.memoryHook;
+  if (q.tip) return q.tip;
+  return CATEGORY_HOOKS[q.category];
+}
+
 function SimuladoPage() {
   const { user, loading: authLoading } = useAuth();
   const [hydrated, setHydrated] = useState(false);
