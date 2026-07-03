@@ -239,18 +239,25 @@ function SimuladoPage() {
     <div className="mx-auto max-w-3xl px-4 py-6 md:py-10">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 gap-3">
-        <div>
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">Voltar</span>
+        </Link>
+        <div className="text-right">
           <p className="text-xs uppercase tracking-widest text-primary-glow font-semibold">
             Simulado Inteligente
           </p>
-          <h1 className="text-2xl font-display font-bold">
+          <h1 className="text-xl md:text-2xl font-display font-bold">
             Questão {Math.min(index + 1, questions.length)}{" "}
             <span className="text-muted-foreground text-base font-normal">
               / {questions.length}
             </span>
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="px-3 py-1.5 rounded-xl border border-success/30 bg-success/10 text-center min-w-[78px]">
             <p className="text-[10px] uppercase tracking-wide text-success/80">Acertos</p>
             <p className="text-sm font-display font-bold text-success leading-tight">
