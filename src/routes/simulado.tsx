@@ -7,6 +7,7 @@ import {
   INCIDENCE_META,
   CATEGORY_LABELS,
   type Question,
+  type Category,
 } from "@/data/questions";
 import {
   Check,
@@ -20,6 +21,9 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowLeft,
+  Brain,
+  Sparkles,
+  ListChecks,
 } from "lucide-react";
 import { Placa } from "@/components/Placa";
 
