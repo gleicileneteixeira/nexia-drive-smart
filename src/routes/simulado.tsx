@@ -978,11 +978,14 @@ function ReviewCard({
                 </p>
               )}
 
-              {q.tip && (
-                <p className="text-sm p-2 rounded-lg bg-primary/10 text-primary-glow">
-                  💡 <span className="font-semibold">Macete:</span> {q.tip}
+              <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-primary-glow font-bold flex items-center gap-1.5 mb-1">
+                  <Brain className="h-3.5 w-3.5" /> Gancho de memória
                 </p>
-              )}
+                <p className="text-sm text-foreground/90 leading-relaxed">
+                  {getMemoryHook(q)}
+                </p>
+              </div>
             </div>
           </motion.div>
         )}
