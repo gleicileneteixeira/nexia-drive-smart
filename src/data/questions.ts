@@ -22,6 +22,7 @@ export interface Question {
   legalBase?: string; // ex: "Art. 218 do CTB"
   commonMistake?: string; // qual pegadinha as bancas usam
   tip?: string;
+  memoryHook?: string; // gancho mnemônico para memorização (frase-chave, rima, sigla, imagem mental)
   incidence: Incidence;
   trap?: boolean; // pegadinha clássica
   difficulty: 1 | 2 | 3;

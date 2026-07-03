@@ -7,6 +7,7 @@ import {
   INCIDENCE_META,
   CATEGORY_LABELS,
   type Question,
+  type Category,
 } from "@/data/questions";
 import {
   Check,
@@ -20,6 +21,9 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowLeft,
+  Brain,
+  Sparkles,
+  ListChecks,
 } from "lucide-react";
 import { Placa } from "@/components/Placa";
 
@@ -56,9 +60,11 @@ function saveSeen(ids: string[]) {
     window.localStorage.setItem(SEEN_KEY, JSON.stringify(ids));
   } catch {}
 }
-function buildFresh(): Question[] {
+function buildFresh(category?: Category): Question[] {
   const seen = loadSeen();
-  const fresh = getRandomizedQuestions(TOTAL, { exclude: seen, placasCount: 3 });
+  const fresh = category
+    ? getRandomizedQuestions(TOTAL, { exclude: seen, categories: [category] })
+    : getRandomizedQuestions(TOTAL, { exclude: seen, placasCount: 3 });
   const newSeen = Array.from(new Set([...seen, ...fresh.map((q) => q.id)]));
   saveSeen(newSeen);
   return fresh;
@@ -70,6 +76,7 @@ interface PersistedState {
   selected: number | null;
   answers: (number | null)[]; // index escolhido por questão
   startedAt: number;
+  mode?: "completo" | Category;
 }
 
 function loadPersisted(): PersistedState | null {
@@ -99,6 +106,24 @@ function clearPersisted() {
   } catch {}
 }
 
+// ---------- Gancho de memória: fallback automático quando a questão não traz um pronto ----------
+const CATEGORY_HOOKS: Record<Category, string> = {
+  legislacao: "Pense na sigla CTB → Código de Trânsito Brasileiro: toda regra nasce de um artigo. Ligue a resposta a uma imagem de placa + número do artigo.",
+  placas: "Formato + cor = função. Triângulo amarelo → advertência (avisa). Círculo vermelho → proibição (proíbe). Retângulo azul → indicação (informa).",
+  "direcao-defensiva": "Regra do 3S: Ver, Prever, Rever. Antes de agir, olhe, imagine o pior cenário e confira de novo. A resposta certa quase sempre é a mais cautelosa.",
+  "primeiros-socorros": "Prioridade PAS: Proteger, Avisar, Socorrer — nessa ordem. Nunca movimente vítima com suspeita de fratura na coluna.",
+  infracoes: "Ligue à mão: 3 pontos (leve), 4 (média), 5 (grave), 7 (gravíssima). Multiplicador só aparece em gravíssimas 'especiais' (álcool, racha, celular).",
+  "meio-ambiente": "Poluir = punir. Fumaça preta, buzina desnecessária e descarte irregular caem como infração ambiental. Associe à imagem de um cano soltando fumaça.",
+  mecanica: "Antes de girar a chave, faça o 'ABC': Água (radiador), Bateria e Combustível. Pneu e óleo entram no check semanal.",
+  prioridade: "Ordem de prioridade em cruzamento sem sinalização: 1) veículo na rotatória; 2) trilhos (trem/VLT); 3) quem vem pela direita.",
+};
+
+function getMemoryHook(q: Question): string {
+  if (q.memoryHook) return q.memoryHook;
+  if (q.tip) return q.tip;
+  return CATEGORY_HOOKS[q.category];
+}
+
 function SimuladoPage() {
   const { user, loading: authLoading } = useAuth();
   const [hydrated, setHydrated] = useState(false);
@@ -108,11 +133,12 @@ function SimuladoPage() {
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [resumed, setResumed] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   // Hidrata estado a partir do localStorage
   useEffect(() => {
     const persisted = loadPersisted();
-    if (persisted) {
+    if (persisted && persisted.questions?.length) {
       setQuestions(persisted.questions);
       setIndex(persisted.index);
       setSelected(persisted.selected);
@@ -122,15 +148,7 @@ function SimuladoPage() {
         setShowResult(true);
       }
     } else {
-      const fresh = buildFresh();
-      setQuestions(fresh);
-      savePersisted({
-        questions: fresh,
-        index: 0,
-        selected: null,
-        answers: [],
-        startedAt: Date.now(),
-      });
+      setShowPicker(true);
     }
     setHydrated(true);
   }, []);
@@ -147,22 +165,35 @@ function SimuladoPage() {
     });
   }, [hydrated, questions, index, selected, answers]);
 
-  function restart() {
+  function startWithMode(mode: "completo" | Category) {
     clearPersisted();
-    const fresh = buildFresh();
+    const fresh = buildFresh(mode === "completo" ? undefined : mode);
     setQuestions(fresh);
     setIndex(0);
     setSelected(null);
     setAnswers([]);
     setShowResult(false);
     setResumed(false);
+    setShowPicker(false);
     savePersisted({
       questions: fresh,
       index: 0,
       selected: null,
       answers: [],
       startedAt: Date.now(),
+      mode,
     });
+  }
+
+  function restart() {
+    clearPersisted();
+    setQuestions([]);
+    setIndex(0);
+    setSelected(null);
+    setAnswers([]);
+    setShowResult(false);
+    setResumed(false);
+    setShowPicker(true);
   }
 
   if (authLoading) {
@@ -197,12 +228,15 @@ function SimuladoPage() {
       </div>
     );
   }
-  if (!hydrated || !questions.length) {
+  if (!hydrated) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 text-center text-muted-foreground">
         Carregando simulado…
       </div>
     );
+  }
+  if (showPicker || !questions.length) {
+    return <ModePicker onPick={startWithMode} />;
   }
 
   const q = questions[Math.min(index, questions.length - 1)];
@@ -486,12 +520,91 @@ function DetailedFeedback({
         </p>
       )}
 
-      {q.tip && (
-        <p className="text-sm mt-3 p-2 rounded-lg bg-primary/10 text-primary-glow">
-          💡 <span className="font-semibold">Macete:</span> {q.tip}
+      <div className="mt-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
+        <p className="text-[11px] uppercase tracking-widest text-primary-glow font-bold flex items-center gap-1.5 mb-1">
+          <Brain className="h-3.5 w-3.5" /> Gancho de memória
         </p>
-      )}
+        <p className="text-sm text-foreground/90 leading-relaxed">
+          {getMemoryHook(q)}
+        </p>
+      </div>
     </motion.div>
+  );
+}
+
+function ModePicker({ onPick }: { onPick: (m: "completo" | Category) => void }) {
+  const cats: { id: Category; icon: string }[] = [
+    { id: "legislacao", icon: "📘" },
+    { id: "placas", icon: "🚸" },
+    { id: "direcao-defensiva", icon: "🛡️" },
+    { id: "primeiros-socorros", icon: "🚑" },
+    { id: "infracoes", icon: "⚠️" },
+    { id: "meio-ambiente", icon: "🌱" },
+    { id: "mecanica", icon: "🔧" },
+    { id: "prioridade", icon: "🔀" },
+  ];
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-6 md:py-10">
+      <div className="flex items-center justify-between mb-6 gap-3">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Link>
+        <p className="text-xs uppercase tracking-widest text-primary-glow font-semibold">
+          Simulado Inteligente
+        </p>
+      </div>
+
+      <h1 className="text-2xl md:text-3xl font-display font-bold text-center">
+        Escolha o tipo de simulado
+      </h1>
+      <p className="text-sm text-muted-foreground text-center mt-1 mb-6">
+        Treine no formato oficial ou foque em uma matéria específica.
+      </p>
+
+      <button
+        onClick={() => onPick("completo")}
+        className="w-full text-left rounded-2xl border border-primary/40 bg-primary/10 p-5 shadow-glow hover:bg-primary/15 transition-colors"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+            <Sparkles className="h-5 w-5 text-primary-glow" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-widest text-primary-glow font-bold">
+              Recomendado
+            </p>
+            <p className="font-display font-bold text-lg">Simulado completo</p>
+            <p className="text-sm text-muted-foreground">
+              30 questões no formato DETRAN: 3 placas + 27 das demais matérias, pesos reais de incidência.
+            </p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-primary-glow mt-2 shrink-0" />
+        </div>
+      </button>
+
+      <div className="mt-6">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1.5 mb-3">
+          <ListChecks className="h-3.5 w-3.5" /> Ou treine por categoria
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {cats.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onPick(c.id)}
+              className="text-left rounded-2xl border border-border bg-background/40 p-4 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+            >
+              <div className="text-2xl mb-1">{c.icon}</div>
+              <p className="text-sm font-semibold leading-tight">{CATEGORY_LABELS[c.id]}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">30 questões</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -865,11 +978,14 @@ function ReviewCard({
                 </p>
               )}
 
-              {q.tip && (
-                <p className="text-sm p-2 rounded-lg bg-primary/10 text-primary-glow">
-                  💡 <span className="font-semibold">Macete:</span> {q.tip}
+              <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-primary-glow font-bold flex items-center gap-1.5 mb-1">
+                  <Brain className="h-3.5 w-3.5" /> Gancho de memória
                 </p>
-              )}
+                <p className="text-sm text-foreground/90 leading-relaxed">
+                  {getMemoryHook(q)}
+                </p>
+              </div>
             </div>
           </motion.div>
         )}
