@@ -186,6 +186,13 @@ function SimuladoPage() {
           >
             Entrar ou criar conta
           </Link>
+          <Link
+            to="/"
+            className="mt-3 inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar para o início
+          </Link>
         </div>
       </div>
     );
