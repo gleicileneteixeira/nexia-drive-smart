@@ -714,6 +714,13 @@ function ResultScreen({
         >
           Treinar mais um simulado
         </button>
+        <Link
+          to="/"
+          className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border bg-secondary/50 text-foreground font-semibold hover:bg-accent/30 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar para o início
+        </Link>
       </div>
     </motion.div>
   );
