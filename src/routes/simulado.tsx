@@ -19,6 +19,7 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  ArrowLeft,
 } from "lucide-react";
 import { Placa } from "@/components/Placa";
 
