@@ -210,12 +210,15 @@ function SimuladoPage() {
       </div>
     );
   }
-  if (!hydrated || !questions.length) {
+  if (!hydrated) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 text-center text-muted-foreground">
         Carregando simulado…
       </div>
     );
+  }
+  if (showPicker || !questions.length) {
+    return <ModePicker onPick={startWithMode} />;
   }
 
   const q = questions[Math.min(index, questions.length - 1)];
