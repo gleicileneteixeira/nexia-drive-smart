@@ -60,9 +60,11 @@ function saveSeen(ids: string[]) {
     window.localStorage.setItem(SEEN_KEY, JSON.stringify(ids));
   } catch {}
 }
-function buildFresh(): Question[] {
+function buildFresh(category?: Category): Question[] {
   const seen = loadSeen();
-  const fresh = getRandomizedQuestions(TOTAL, { exclude: seen, placasCount: 3 });
+  const fresh = category
+    ? getRandomizedQuestions(TOTAL, { exclude: seen, categories: [category] })
+    : getRandomizedQuestions(TOTAL, { exclude: seen, placasCount: 3 });
   const newSeen = Array.from(new Set([...seen, ...fresh.map((q) => q.id)]));
   saveSeen(newSeen);
   return fresh;
@@ -74,6 +76,7 @@ interface PersistedState {
   selected: number | null;
   answers: (number | null)[]; // index escolhido por questão
   startedAt: number;
+  mode?: "completo" | Category;
 }
 
 function loadPersisted(): PersistedState | null {
