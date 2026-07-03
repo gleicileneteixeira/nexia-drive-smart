@@ -520,12 +520,91 @@ function DetailedFeedback({
         </p>
       )}
 
-      {q.tip && (
-        <p className="text-sm mt-3 p-2 rounded-lg bg-primary/10 text-primary-glow">
-          💡 <span className="font-semibold">Macete:</span> {q.tip}
+      <div className="mt-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
+        <p className="text-[11px] uppercase tracking-widest text-primary-glow font-bold flex items-center gap-1.5 mb-1">
+          <Brain className="h-3.5 w-3.5" /> Gancho de memória
         </p>
-      )}
+        <p className="text-sm text-foreground/90 leading-relaxed">
+          {getMemoryHook(q)}
+        </p>
+      </div>
     </motion.div>
+  );
+}
+
+function ModePicker({ onPick }: { onPick: (m: "completo" | Category) => void }) {
+  const cats: { id: Category; icon: string }[] = [
+    { id: "legislacao", icon: "📘" },
+    { id: "placas", icon: "🚸" },
+    { id: "direcao-defensiva", icon: "🛡️" },
+    { id: "primeiros-socorros", icon: "🚑" },
+    { id: "infracoes", icon: "⚠️" },
+    { id: "meio-ambiente", icon: "🌱" },
+    { id: "mecanica", icon: "🔧" },
+    { id: "prioridade", icon: "🔀" },
+  ];
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-6 md:py-10">
+      <div className="flex items-center justify-between mb-6 gap-3">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Link>
+        <p className="text-xs uppercase tracking-widest text-primary-glow font-semibold">
+          Simulado Inteligente
+        </p>
+      </div>
+
+      <h1 className="text-2xl md:text-3xl font-display font-bold text-center">
+        Escolha o tipo de simulado
+      </h1>
+      <p className="text-sm text-muted-foreground text-center mt-1 mb-6">
+        Treine no formato oficial ou foque em uma matéria específica.
+      </p>
+
+      <button
+        onClick={() => onPick("completo")}
+        className="w-full text-left rounded-2xl border border-primary/40 bg-primary/10 p-5 shadow-glow hover:bg-primary/15 transition-colors"
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+            <Sparkles className="h-5 w-5 text-primary-glow" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-widest text-primary-glow font-bold">
+              Recomendado
+            </p>
+            <p className="font-display font-bold text-lg">Simulado completo</p>
+            <p className="text-sm text-muted-foreground">
+              30 questões no formato DETRAN: 3 placas + 27 das demais matérias, pesos reais de incidência.
+            </p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-primary-glow mt-2 shrink-0" />
+        </div>
+      </button>
+
+      <div className="mt-6">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-1.5 mb-3">
+          <ListChecks className="h-3.5 w-3.5" /> Ou treine por categoria
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {cats.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onPick(c.id)}
+              className="text-left rounded-2xl border border-border bg-background/40 p-4 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+            >
+              <div className="text-2xl mb-1">{c.icon}</div>
+              <p className="text-sm font-semibold leading-tight">{CATEGORY_LABELS[c.id]}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">30 questões</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
