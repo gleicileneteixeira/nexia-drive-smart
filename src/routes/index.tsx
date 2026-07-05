@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import {
   RadialBarChart,
   RadialBar,
@@ -26,7 +30,7 @@ import {
 import { CATEGORY_LABELS } from "@/data/questions";
 
 export const Route = createFileRoute("/")({
-  component: Dashboard,
+  component: HomeGate,
   head: () => ({
     meta: [
       { title: "Nexia Simulado DETRAN — As questões que realmente caem" },
@@ -83,6 +87,28 @@ const QUICK = [
     accent: "from-primary to-warning",
   },
 ] as const;
+
+function HomeGate() {
+  const navigate = useNavigate();
+  const [checked, setChecked] = useState(false);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        navigate({ to: "/auth", replace: true });
+      } else {
+        setChecked(true);
+      }
+    });
+  }, [navigate]);
+  if (!checked) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  return <Dashboard />;
+}
 
 const PERFORMANCE = [
   { cat: "Legislação", v: 84 },

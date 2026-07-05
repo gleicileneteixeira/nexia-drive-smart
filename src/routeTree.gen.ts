@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TurboRouteImport } from './routes/turbo'
 import { Route as SimuladoRouteImport } from './routes/simulado'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PsicotecnicoRouteImport } from './routes/psicotecnico'
 import { Route as PlacasRouteImport } from './routes/placas'
 import { Route as MaisCaemRouteImport } from './routes/mais-caem'
@@ -29,6 +30,11 @@ const TurboRoute = TurboRouteImport.update({
 const SimuladoRoute = SimuladoRouteImport.update({
   id: '/simulado',
   path: '/simulado',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PsicotecnicoRoute = PsicotecnicoRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/mais-caem': typeof MaisCaemRoute
   '/placas': typeof PlacasRoute
   '/psicotecnico': typeof PsicotecnicoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/simulado': typeof SimuladoRoute
   '/turbo': typeof TurboRoute
   '/biblioteca/$id': typeof BibliotecaIdRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/mais-caem': typeof MaisCaemRoute
   '/placas': typeof PlacasRoute
   '/psicotecnico': typeof PsicotecnicoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/simulado': typeof SimuladoRoute
   '/turbo': typeof TurboRoute
   '/biblioteca/$id': typeof BibliotecaIdRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/mais-caem': typeof MaisCaemRoute
   '/placas': typeof PlacasRoute
   '/psicotecnico': typeof PsicotecnicoRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/simulado': typeof SimuladoRoute
   '/turbo': typeof TurboRoute
   '/biblioteca/$id': typeof BibliotecaIdRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/mais-caem'
     | '/placas'
     | '/psicotecnico'
+    | '/reset-password'
     | '/simulado'
     | '/turbo'
     | '/biblioteca/$id'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/mais-caem'
     | '/placas'
     | '/psicotecnico'
+    | '/reset-password'
     | '/simulado'
     | '/turbo'
     | '/biblioteca/$id'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/mais-caem'
     | '/placas'
     | '/psicotecnico'
+    | '/reset-password'
     | '/simulado'
     | '/turbo'
     | '/biblioteca/$id'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   MaisCaemRoute: typeof MaisCaemRoute
   PlacasRoute: typeof PlacasRoute
   PsicotecnicoRoute: typeof PsicotecnicoRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SimuladoRoute: typeof SimuladoRoute
   TurboRoute: typeof TurboRoute
 }
@@ -186,6 +199,13 @@ declare module '@tanstack/react-router' {
       path: '/simulado'
       fullPath: '/simulado'
       preLoaderRoute: typeof SimuladoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/psicotecnico': {
@@ -275,6 +295,7 @@ const rootRouteChildren: RootRouteChildren = {
   MaisCaemRoute: MaisCaemRoute,
   PlacasRoute: PlacasRoute,
   PsicotecnicoRoute: PsicotecnicoRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SimuladoRoute: SimuladoRoute,
   TurboRoute: TurboRoute,
 }

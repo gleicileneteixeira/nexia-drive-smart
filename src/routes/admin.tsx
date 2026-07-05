@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Upload, Trash2, Pencil, LogOut, ArrowLeft } from "lucide-react";
+import { Loader2, Upload, Trash2, Pencil, LogOut, ArrowLeft, Search, Download, Users } from "lucide-react";
+import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -98,33 +100,206 @@ function AdminDashboard({ email, onSignOut }: { email: string | null; onSignOut:
         </Button>
       </div>
 
-      <ItemForm
-        editing={editing}
-        onDone={() => {
-          setEditing(null);
-          refetch();
-          qc.invalidateQueries({ queryKey: ["library"] });
-        }}
-      />
-
-      <div className="glass rounded-2xl p-4">
-        <h2 className="font-display font-bold mb-3">Itens ({items.length})</h2>
-        <div className="space-y-2">
-          {items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-background/50">
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">{item.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {item.item_type.toUpperCase()} · {item.published ? "Publicado" : "Rascunho"}
-                  {item.is_paid && ` · R$ ${((item.price_cents ?? 0) / 100).toFixed(2)}`}
-                </p>
-              </div>
-              <Button size="icon" variant="ghost" onClick={() => setEditing(item)}><Pencil className="h-4 w-4" /></Button>
-              <Button size="icon" variant="ghost" onClick={() => onDelete(item)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+      <Tabs defaultValue="users">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" /> Usuários</TabsTrigger>
+          <TabsTrigger value="library" className="gap-2"><Upload className="h-4 w-4" /> Biblioteca</TabsTrigger>
+        </TabsList>
+        <TabsContent value="users" className="mt-4">
+          <UsersPanel />
+        </TabsContent>
+        <TabsContent value="library" className="mt-4 space-y-6">
+          <ItemForm
+            editing={editing}
+            onDone={() => {
+              setEditing(null);
+              refetch();
+              qc.invalidateQueries({ queryKey: ["library"] });
+            }}
+          />
+          <div className="glass rounded-2xl p-4">
+            <h2 className="font-display font-bold mb-3">Itens ({items.length})</h2>
+            <div className="space-y-2">
+              {items.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-background/50">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.item_type.toUpperCase()} · {item.published ? "Publicado" : "Rascunho"}
+                      {item.is_paid && ` · R$ ${((item.price_cents ?? 0) / 100).toFixed(2)}`}
+                    </p>
+                  </div>
+                  <Button size="icon" variant="ghost" onClick={() => setEditing(item)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => onDelete(item)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              ))}
+              {items.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Nenhum item ainda. Adicione abaixo.</p>}
             </div>
-          ))}
-          {items.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Nenhum item ainda. Adicione abaixo.</p>}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+type ProfileRow = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  phone: string | null;
+  employment_status: string | null;
+  employment_other: string | null;
+  studies: boolean | null;
+  created_at: string;
+};
+
+const EMPLOYMENT_LABELS: Record<string, string> = {
+  clt: "Carteira assinada (CLT)",
+  autonomo: "Autônomo",
+  empresario: "Empresário",
+  desempregado: "Desempregado",
+  outro: "Outro",
+  carteira_assinada: "Carteira assinada (CLT)",
+  nao_trabalha: "Desempregado",
+};
+
+function UsersPanel() {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<string>("all");
+
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ["admin", "profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name, email, phone, employment_status, employment_other, studies, created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ProfileRow[];
+    },
+  });
+
+  const filtered = users.filter((u) => {
+    if (filter !== "all" && u.employment_status !== filter) return false;
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (u.display_name ?? "").toLowerCase().includes(q) ||
+      (u.email ?? "").toLowerCase().includes(q) ||
+      (u.phone ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  function buildRows() {
+    return filtered.map((u) => ({
+      Nome: u.display_name ?? "",
+      "E-mail": u.email ?? "",
+      Telefone: u.phone ?? "",
+      "Situação profissional":
+        u.employment_status === "outro"
+          ? `Outro: ${u.employment_other ?? ""}`
+          : EMPLOYMENT_LABELS[u.employment_status ?? ""] ?? (u.employment_status ?? ""),
+      Estuda: u.studies === true ? "Sim" : u.studies === false ? "Não" : "",
+      "Data de cadastro": new Date(u.created_at).toLocaleString("pt-BR"),
+    }));
+  }
+
+  function exportXlsx() {
+    const ws = XLSX.utils.json_to_sheet(buildRows());
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Usuários");
+    XLSX.writeFile(wb, `usuarios-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  function exportCsv() {
+    const rows = buildRows();
+    if (!rows.length) return;
+    const headers = Object.keys(rows[0]);
+    const escape = (v: unknown) => {
+      const s = String(v ?? "");
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const csv =
+      headers.join(",") + "\n" +
+      rows.map((r) => headers.map((h) => escape((r as Record<string, unknown>)[h])).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `usuarios-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="glass rounded-2xl p-4 space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <Label htmlFor="search" className="text-xs">Pesquisar</Label>
+          <div className="relative">
+            <Search className="h-4 w-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input id="search" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nome, e-mail ou telefone" className="pl-8" />
+          </div>
         </div>
+        <div className="min-w-[200px]">
+          <Label className="text-xs">Situação</Label>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+            <option value="all">Todas</option>
+            <option value="clt">CLT</option>
+            <option value="autonomo">Autônomo</option>
+            <option value="empresario">Empresário</option>
+            <option value="desempregado">Desempregado</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}>
+            <Download className="h-4 w-4 mr-1" /> CSV
+          </Button>
+          <Button size="sm" onClick={exportXlsx} disabled={!filtered.length}>
+            <Download className="h-4 w-4 mr-1" /> Excel
+          </Button>
+        </div>
+      </div>
+
+      <div className="text-xs text-muted-foreground">
+        {isLoading ? "Carregando…" : `${filtered.length} de ${users.length} usuários`}
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border border-border/40">
+        <table className="w-full text-sm">
+          <thead className="bg-background/50 text-xs uppercase text-muted-foreground">
+            <tr>
+              <th className="text-left px-3 py-2">Nome</th>
+              <th className="text-left px-3 py-2">E-mail</th>
+              <th className="text-left px-3 py-2">Telefone</th>
+              <th className="text-left px-3 py-2">Situação</th>
+              <th className="text-left px-3 py-2">Estuda</th>
+              <th className="text-left px-3 py-2">Cadastro</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((u) => (
+              <tr key={u.id} className="border-t border-border/30">
+                <td className="px-3 py-2">{u.display_name ?? "—"}</td>
+                <td className="px-3 py-2">{u.email ?? "—"}</td>
+                <td className="px-3 py-2">{u.phone ?? "—"}</td>
+                <td className="px-3 py-2">
+                  {u.employment_status === "outro"
+                    ? `Outro: ${u.employment_other ?? ""}`
+                    : EMPLOYMENT_LABELS[u.employment_status ?? ""] ?? (u.employment_status ?? "—")}
+                </td>
+                <td className="px-3 py-2">{u.studies === true ? "Sim" : u.studies === false ? "Não" : "—"}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
+              </tr>
+            ))}
+            {!isLoading && filtered.length === 0 && (
+              <tr><td colSpan={6} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
