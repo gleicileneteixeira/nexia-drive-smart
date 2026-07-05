@@ -88,6 +88,28 @@ const QUICK = [
   },
 ] as const;
 
+function HomeGate() {
+  const navigate = useNavigate();
+  const [checked, setChecked] = useState(false);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        navigate({ to: "/auth", replace: true });
+      } else {
+        setChecked(true);
+      }
+    });
+  }, [navigate]);
+  if (!checked) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  return <Dashboard />;
+}
+
 const PERFORMANCE = [
   { cat: "Legislação", v: 84 },
   { cat: "Placas", v: 92 },
