@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import {
   RadialBarChart,
   RadialBar,
@@ -26,7 +30,7 @@ import {
 import { CATEGORY_LABELS } from "@/data/questions";
 
 export const Route = createFileRoute("/")({
-  component: Dashboard,
+  component: HomeGate,
   head: () => ({
     meta: [
       { title: "Nexia Simulado DETRAN — As questões que realmente caem" },
