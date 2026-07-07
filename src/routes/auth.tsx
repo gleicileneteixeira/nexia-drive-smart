@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Entrar — Nexia DETRAN" }] }),
 });
 
-type Employment = "clt" | "autonomo" | "empresario" | "desempregado" | "outro";
+type Employment = "clt" | "autonomo" | "estudante" | "trabalha_estuda" | "desempregado" | "outro";
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -27,7 +28,6 @@ function AuthPage() {
   const [phone, setPhone] = useState("");
   const [employment, setEmployment] = useState<Employment | "">("");
   const [employmentOther, setEmploymentOther] = useState("");
-  const [studies, setStudies] = useState<"sim" | "nao" | "">("");
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -44,7 +44,7 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        if (!name.trim() || !phone.trim() || !employment || !studies) {
+        if (!name.trim() || !phone.trim() || !employment) {
           throw new Error("Preencha todos os campos obrigatórios.");
         }
         if (employment === "outro" && !employmentOther.trim()) {
@@ -77,7 +77,6 @@ function AuthPage() {
             phone,
             employment_status: employment,
             employment_other: employment === "outro" ? employmentOther : null,
-            studies: studies === "sim",
           });
           if (pErr) {
             if (pErr.code === "23505") throw new Error("Este e-mail já está cadastrado.");
@@ -164,16 +163,19 @@ function AuthPage() {
               </div>
               <div>
                 <Label htmlFor="employment">Situação profissional *</Label>
-                <select id="employment" required value={employment}
-                  onChange={(e) => setEmployment(e.target.value as Employment)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm md:text-sm">
-                  <option value="">Selecione…</option>
-                  <option value="clt">Carteira assinada (CLT)</option>
-                  <option value="autonomo">Autônomo(a)</option>
-                  <option value="empresario">Empresário(a)</option>
-                  <option value="desempregado">Desempregado(a)</option>
-                  <option value="outro">Outro</option>
-                </select>
+                <Select value={employment} onValueChange={(v) => setEmployment(v as Employment)}>
+                  <SelectTrigger id="employment" className="h-9 w-full text-base md:text-sm">
+                    <SelectValue placeholder="Selecione…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clt">CLT</SelectItem>
+                    <SelectItem value="autonomo">Autônomo(a)</SelectItem>
+                    <SelectItem value="estudante">Estudante</SelectItem>
+                    <SelectItem value="trabalha_estuda">Trabalha e Estuda</SelectItem>
+                    <SelectItem value="desempregado">Desempregado(a)</SelectItem>
+                    <SelectItem value="outro">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {employment === "outro" && (
                 <div>
@@ -182,21 +184,7 @@ function AuthPage() {
                     onChange={(e) => setEmploymentOther(e.target.value)} />
                 </div>
               )}
-              <div>
-                <Label>Estuda atualmente? *</Label>
-                <div className="flex gap-2 mt-1.5">
-                  {(["sim", "nao"] as const).map((v) => (
-                    <button key={v} type="button" onClick={() => setStudies(v)}
-                      className={`flex-1 h-9 rounded-md border text-sm font-medium capitalize transition-colors ${
-                        studies === v
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-input hover:bg-accent"
-                      }`}>
-                      {v === "sim" ? "Sim" : "Não"}
-                    </button>
-                  ))}
-                </div>
-              </div>
+
             </>
           )}
           <div>

@@ -149,18 +149,16 @@ type ProfileRow = {
   phone: string | null;
   employment_status: string | null;
   employment_other: string | null;
-  studies: boolean | null;
   created_at: string;
 };
 
 const EMPLOYMENT_LABELS: Record<string, string> = {
-  clt: "Carteira assinada (CLT)",
-  autonomo: "Autônomo",
-  empresario: "Empresário",
-  desempregado: "Desempregado",
-  outro: "Outro",
-  carteira_assinada: "Carteira assinada (CLT)",
-  nao_trabalha: "Desempregado",
+  clt: "CLT",
+  autonomo: "Autônomo(a)",
+  estudante: "Estudante",
+  trabalha_estuda: "Trabalha e Estuda",
+  desempregado: "Desempregado(a)",
+  outro: "Outros",
 };
 
 function UsersPanel() {
@@ -172,7 +170,7 @@ function UsersPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, display_name, email, phone, employment_status, employment_other, studies, created_at")
+        .select("id, display_name, email, phone, employment_status, employment_other, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ProfileRow[];
@@ -197,9 +195,8 @@ function UsersPanel() {
       Telefone: u.phone ?? "",
       "Situação profissional":
         u.employment_status === "outro"
-          ? `Outro: ${u.employment_other ?? ""}`
+          ? `Outros: ${u.employment_other ?? ""}`
           : EMPLOYMENT_LABELS[u.employment_status ?? ""] ?? (u.employment_status ?? ""),
-      Estuda: u.studies === true ? "Sim" : u.studies === false ? "Não" : "",
       "Data de cadastro": new Date(u.created_at).toLocaleString("pt-BR"),
     }));
   }
@@ -248,10 +245,11 @@ function UsersPanel() {
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
             <option value="all">Todas</option>
             <option value="clt">CLT</option>
-            <option value="autonomo">Autônomo</option>
-            <option value="empresario">Empresário</option>
-            <option value="desempregado">Desempregado</option>
-            <option value="outro">Outro</option>
+            <option value="autonomo">Autônomo(a)</option>
+            <option value="estudante">Estudante</option>
+            <option value="trabalha_estuda">Trabalha e Estuda</option>
+            <option value="desempregado">Desempregado(a)</option>
+            <option value="outro">Outros</option>
           </select>
         </div>
         <div className="flex gap-2">
@@ -276,7 +274,6 @@ function UsersPanel() {
               <th className="text-left px-3 py-2">E-mail</th>
               <th className="text-left px-3 py-2">Telefone</th>
               <th className="text-left px-3 py-2">Situação</th>
-              <th className="text-left px-3 py-2">Estuda</th>
               <th className="text-left px-3 py-2">Cadastro</th>
             </tr>
           </thead>
@@ -291,12 +288,11 @@ function UsersPanel() {
                     ? `Outro: ${u.employment_other ?? ""}`
                     : EMPLOYMENT_LABELS[u.employment_status ?? ""] ?? (u.employment_status ?? "—")}
                 </td>
-                <td className="px-3 py-2">{u.studies === true ? "Sim" : u.studies === false ? "Não" : "—"}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
               </tr>
             ))}
             {!isLoading && filtered.length === 0 && (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
+              <tr><td colSpan={5} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
             )}
           </tbody>
         </table>
