@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 import { RequireAuth } from "./RequireAuth";
+import { ProfilePrompt } from "./ProfilePrompt";
 import { Flame, Home, Sparkles, Zap, Trophy, TrafficCone, Brain, Library, LogIn, LogOut, UserCircle, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -160,6 +161,8 @@ export function AppShell() {
           </div>
         </div>
       </header>
+
+      <ProfilePrompt />
 
       <main className="flex-1">
         {pathname === "/auth" || pathname === "/reset-password" ? (
