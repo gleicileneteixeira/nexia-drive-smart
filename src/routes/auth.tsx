@@ -219,6 +219,11 @@ function AuthPage() {
               </button>
             )}
           </div>
+          {errorMsg && (
+            <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 text-destructive text-sm px-3 py-2">
+              {errorMsg}
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {mode === "login" ? "Entrar" : "Criar conta"}
