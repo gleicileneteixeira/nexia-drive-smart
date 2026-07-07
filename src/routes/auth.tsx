@@ -15,7 +15,16 @@ export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Entrar — Nexia DETRAN" }] }),
 });
 
-type Employment = "clt" | "autonomo" | "estudante" | "trabalha_estuda" | "desempregado" | "outro";
+type Employment = "carteira_assinada" | "autonomo" | "estudante" | "trabalha_estuda" | "desempregado" | "outro";
+
+const employmentToDb: Record<string, string> = {
+  carteira_assinada: "carteira_assinada",
+  autonomo: "autonomo",
+  estudante: "nao_trabalha",
+  trabalha_estuda: "carteira_assinada",
+  desempregado: "nao_trabalha",
+  outro: "nao_trabalha",
+};
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -81,7 +90,7 @@ function AuthPage() {
             display_name: name,
             email,
             phone,
-            employment_status: employment,
+            employment_status: employmentToDb[employment] ?? employment,
             employment_other: employment === "outro" ? employmentOther : null,
           });
           if (pErr) {
@@ -176,7 +185,7 @@ function AuthPage() {
                     <SelectValue placeholder="Selecione…" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="clt">CLT</SelectItem>
+                    <SelectItem value="carteira_assinada">CLT</SelectItem>
                     <SelectItem value="autonomo">Autônomo(a)</SelectItem>
                     <SelectItem value="estudante">Estudante</SelectItem>
                     <SelectItem value="trabalha_estuda">Trabalha e Estuda</SelectItem>
