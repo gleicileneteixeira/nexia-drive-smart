@@ -6,11 +6,9 @@ import {
   useRouter,
   HeadContent,
   Scripts,
-  redirect,
 } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -71,15 +69,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  beforeLoad: async ({ location }) => {
-    if (typeof window === "undefined") return;
-    const publicPaths = ["/auth", "/reset-password"];
-    if (publicPaths.some((p) => location.pathname.startsWith(p))) return;
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      throw redirect({ to: "/auth" });
-    }
-  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

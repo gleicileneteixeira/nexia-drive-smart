@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { Logo } from "./Logo";
+import { RequireAuth } from "./RequireAuth";
 import { Flame, Home, Sparkles, Zap, Trophy, TrafficCone, Brain, Library, LogIn, LogOut, UserCircle, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -161,7 +162,13 @@ export function AppShell() {
       </header>
 
       <main className="flex-1">
-        <Outlet />
+        {pathname === "/auth" || pathname === "/reset-password" ? (
+          <Outlet />
+        ) : (
+          <RequireAuth>
+            <Outlet />
+          </RequireAuth>
+        )}
       </main>
 
       {/* Mobile nav */}
