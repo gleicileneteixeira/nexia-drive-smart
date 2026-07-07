@@ -29,6 +29,7 @@ function AuthPage() {
   const [employment, setEmployment] = useState<Employment | "">("");
   const [employmentOther, setEmploymentOther] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -42,6 +43,7 @@ function AuthPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
     try {
       if (mode === "signup") {
         if (!name.trim() || !phone.trim() || !employment) {
@@ -96,7 +98,9 @@ function AuthPage() {
         navigate({ to: portal === "admin" ? "/admin" : "/" });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro");
+      const msg = err instanceof Error ? err.message : "Erro";
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
