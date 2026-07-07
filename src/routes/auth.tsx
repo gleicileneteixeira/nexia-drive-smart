@@ -66,6 +66,10 @@ function AuthPage() {
           if (error.message.toLowerCase().includes("already")) {
             throw new Error("Este e-mail já está cadastrado. Faça login.");
           }
+          const code = (error as { code?: string }).code;
+          if (code === "weak_password" || error.message.toLowerCase().includes("weak") || error.message.toLowerCase().includes("pwned")) {
+            throw new Error("Senha muito fraca ou vazada. Use uma senha forte com letras maiúsculas, minúsculas, números e símbolos (ex: Nexi@2026!Drv).");
+          }
           throw error;
         }
         const userId = signUpData.user?.id;
