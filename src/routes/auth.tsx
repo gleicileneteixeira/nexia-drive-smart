@@ -29,6 +29,7 @@ function AuthPage() {
   const [employment, setEmployment] = useState<Employment | "">("");
   const [employmentOther, setEmploymentOther] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -42,6 +43,7 @@ function AuthPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
     try {
       if (mode === "signup") {
         if (!name.trim() || !phone.trim() || !employment) {
@@ -96,7 +98,9 @@ function AuthPage() {
         navigate({ to: portal === "admin" ? "/admin" : "/" });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro");
+      const msg = err instanceof Error ? err.message : "Erro";
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -215,6 +219,11 @@ function AuthPage() {
               </button>
             )}
           </div>
+          {errorMsg && (
+            <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 text-destructive text-sm px-3 py-2">
+              {errorMsg}
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {mode === "login" ? "Entrar" : "Criar conta"}
