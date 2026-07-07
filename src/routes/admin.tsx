@@ -11,8 +11,11 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Upload, Trash2, Pencil, LogOut, ArrowLeft, Search, Download, Users } from "lucide-react";
+import { Loader2, Upload, Trash2, Pencil, LogOut, ArrowLeft, Search, Download, Users, KeyRound } from "lucide-react";
 import * as XLSX from "xlsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useServerFn } from "@tanstack/react-start";
+import { adminResetUserPassword } from "@/lib/admin-users.functions";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -164,6 +167,26 @@ const EMPLOYMENT_LABELS: Record<string, string> = {
 function UsersPanel() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [resetUser, setResetUser] = useState<ProfileRow | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const resetPasswordFn = useServerFn(adminResetUserPassword);
+
+  async function handleReset(e: React.FormEvent) {
+    e.preventDefault();
+    if (!resetUser) return;
+    setResetLoading(true);
+    try {
+      await resetPasswordFn({ data: { userId: resetUser.id, newPassword } });
+      toast.success(`Senha de ${resetUser.display_name ?? resetUser.email} redefinida.`);
+      setResetUser(null);
+      setNewPassword("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao redefinir senha.");
+    } finally {
+      setResetLoading(false);
+    }
+  }
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin", "profiles"],
@@ -275,6 +298,7 @@ function UsersPanel() {
               <th className="text-left px-3 py-2">Telefone</th>
               <th className="text-left px-3 py-2">Situação</th>
               <th className="text-left px-3 py-2">Cadastro</th>
+              <th className="text-left px-3 py-2">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -289,14 +313,44 @@ function UsersPanel() {
                     : EMPLOYMENT_LABELS[u.employment_status ?? ""] ?? (u.employment_status ?? "—")}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">{new Date(u.created_at).toLocaleDateString("pt-BR")}</td>
+                <td className="px-3 py-2">
+                  <Button variant="outline" size="sm" onClick={() => { setResetUser(u); setNewPassword(""); }}>
+                    <KeyRound className="h-3 w-3 mr-1" /> Redefinir senha
+                  </Button>
+                </td>
               </tr>
             ))}
             {!isLoading && filtered.length === 0 && (
-              <tr><td colSpan={5} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
+              <tr><td colSpan={6} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
             )}
           </tbody>
         </table>
       </div>
+
+      <Dialog open={!!resetUser} onOpenChange={(o) => { if (!o) { setResetUser(null); setNewPassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Redefinir senha</DialogTitle>
+            <DialogDescription>
+              Nova senha para <strong>{resetUser?.display_name ?? resetUser?.email}</strong>. A pessoa poderá entrar imediatamente com esta senha.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleReset} className="space-y-4">
+            <div>
+              <Label htmlFor="newpw">Nova senha (mínimo 6 caracteres)</Label>
+              <Input id="newpw" type="text" required minLength={6} maxLength={72}
+                value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Ex: Nexi@2026!" />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={resetLoading} className="w-full">
+                {resetLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Confirmar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
