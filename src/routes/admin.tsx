@@ -205,7 +205,7 @@ function UsersPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, display_name, email, phone, employment_status, employment_other, created_at")
+        .select("id, display_name, email, cpf, phone, employment_status, employment_other, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ProfileRow[];
