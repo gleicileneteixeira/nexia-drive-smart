@@ -219,9 +219,14 @@ function UsersPanel() {
     return (
       (u.display_name ?? "").toLowerCase().includes(q) ||
       (u.email ?? "").toLowerCase().includes(q) ||
+      (u.cpf ?? "").toLowerCase().includes(q) ||
       (u.phone ?? "").toLowerCase().includes(q)
     );
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginatedUsers = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   function buildRows() {
     return filtered.map((u) => ({
