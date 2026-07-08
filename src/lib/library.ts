@@ -65,6 +65,10 @@ function extractStoragePath(url: string): string | null {
 export async function checkIsAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-  return !!data;
+  const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+  if (error) {
+    console.error("[checkIsAdmin] has_role RPC error:", error);
+    return false;
+  }
+  return data === true;
 }
