@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, User, ShieldCheck, ArrowLeft } from "lucide-react";
+import { formatCpf, isValidCpf } from "@/lib/cpf";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -34,6 +35,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [name, setName] = useState("");
+  const [cpf, setCpf] = useState("");
   const [phone, setPhone] = useState("");
   const [employment, setEmployment] = useState<Employment | "">("");
   const [employmentOther, setEmploymentOther] = useState("");
@@ -55,8 +57,11 @@ function AuthPage() {
     setErrorMsg(null);
     try {
       if (mode === "signup") {
-        if (!name.trim() || !phone.trim() || !employment) {
+        if (!name.trim() || !cpf.trim() || !phone.trim() || !employment) {
           throw new Error("Preencha todos os campos obrigatórios.");
+        }
+        if (!isValidCpf(cpf)) {
+          throw new Error("CPF inválido. Verifique os números digitados.");
         }
         if (employment === "outro" && !employmentOther.trim()) {
           throw new Error("Descreva sua situação profissional.");
@@ -68,6 +73,7 @@ function AuthPage() {
             emailRedirectTo: window.location.origin,
             data: {
               display_name: name,
+              cpf,
               phone,
               employment_status: employment,
             },
@@ -89,12 +95,18 @@ function AuthPage() {
             id: userId,
             display_name: name,
             email,
+            cpf,
             phone,
             employment_status: employmentToDb[employment] ?? employment,
             employment_other: employment === "outro" ? employmentOther : null,
           });
           if (pErr) {
-            if (pErr.code === "23505") throw new Error("Este e-mail já está cadastrado.");
+            if (pErr.code === "23505") {
+              if (pErr.message?.toLowerCase().includes("cpf")) {
+                throw new Error("Este CPF já está cadastrado. Use outro ou entre em contato com o suporte.");
+              }
+              throw new Error("Este e-mail já está cadastrado. Faça login.");
+            }
             throw pErr;
           }
         }
@@ -172,6 +184,11 @@ function AuthPage() {
               <div>
                 <Label htmlFor="name">Nome completo *</Label>
                 <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="cpf">CPF *</Label>
+                <Input id="cpf" required inputMode="numeric" placeholder="000.000.000-00" maxLength={14}
+                  value={formatCpf(cpf)} onChange={(e) => setCpf(e.target.value)} />
               </div>
               <div>
                 <Label htmlFor="phone">Telefone *</Label>

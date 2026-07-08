@@ -150,6 +150,7 @@ type ProfileRow = {
   id: string;
   display_name: string | null;
   email: string | null;
+  cpf: string | null;
   phone: string | null;
   employment_status: string | null;
   employment_other: string | null;
@@ -167,10 +168,14 @@ const EMPLOYMENT_LABELS: Record<string, string> = {
   outro: "Outros",
 };
 
+const PAGE_SIZES = [10, 20, 50, 100] as const;
+
 function UsersPanel() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [resetUser, setResetUser] = useState<ProfileRow | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
@@ -200,7 +205,7 @@ function UsersPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, display_name, email, phone, employment_status, employment_other, created_at")
+        .select("id, display_name, email, cpf, phone, employment_status, employment_other, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ProfileRow[];
@@ -214,14 +219,20 @@ function UsersPanel() {
     return (
       (u.display_name ?? "").toLowerCase().includes(q) ||
       (u.email ?? "").toLowerCase().includes(q) ||
+      (u.cpf ?? "").toLowerCase().includes(q) ||
       (u.phone ?? "").toLowerCase().includes(q)
     );
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginatedUsers = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   function buildRows() {
     return filtered.map((u) => ({
       Nome: u.display_name ?? "",
       "E-mail": u.email ?? "",
+      CPF: u.cpf ?? "",
       Telefone: u.phone ?? "",
       "Situação profissional":
         u.employment_status === "outro"
@@ -265,13 +276,13 @@ function UsersPanel() {
           <Label htmlFor="search" className="text-xs">Pesquisar</Label>
           <div className="relative">
             <Search className="h-4 w-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input id="search" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nome, e-mail ou telefone" className="pl-8" />
+            <Input id="search" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Nome, e-mail, CPF ou telefone" className="pl-8" />
           </div>
         </div>
         <div className="min-w-[200px]">
           <Label className="text-xs">Situação</Label>
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}
+          <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
             <option value="all">Todas</option>
             <option value="clt">CLT</option>
@@ -280,6 +291,15 @@ function UsersPanel() {
             <option value="trabalha_estuda">Trabalha e Estuda</option>
             <option value="desempregado">Desempregado(a)</option>
             <option value="outro">Outros</option>
+          </select>
+        </div>
+        <div className="min-w-[90px]">
+          <Label className="text-xs">Por página</Label>
+          <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+            {PAGE_SIZES.map((size) => (
+              <option key={size} value={size}>{size}</option>
+            ))}
           </select>
         </div>
         <div className="flex gap-2">
@@ -336,6 +356,7 @@ function UsersPanel() {
             <tr>
               <th className="text-left px-3 py-2">Nome</th>
               <th className="text-left px-3 py-2">E-mail</th>
+              <th className="text-left px-3 py-2">CPF</th>
               <th className="text-left px-3 py-2">Telefone</th>
               <th className="text-left px-3 py-2">Situação</th>
               <th className="text-left px-3 py-2">Cadastro</th>
@@ -343,10 +364,11 @@ function UsersPanel() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((u) => (
+            {paginatedUsers.map((u) => (
               <tr key={u.id} className="border-t border-border/30">
                 <td className="px-3 py-2">{u.display_name ?? "—"}</td>
                 <td className="px-3 py-2">{u.email ?? "—"}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{u.cpf ?? "—"}</td>
                 <td className="px-3 py-2">{u.phone ?? "—"}</td>
                 <td className="px-3 py-2">
                   {u.employment_status === "outro"
@@ -373,11 +395,37 @@ function UsersPanel() {
               </tr>
             ))}
             {!isLoading && filtered.length === 0 && (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
+              <tr><td colSpan={7} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {filtered.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="text-muted-foreground">
+            Página {safePage} de {totalPages}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={!!resetUser} onOpenChange={(o) => { if (!o) { setResetUser(null); setNewPassword(""); } }}>
         <DialogContent>
