@@ -401,6 +401,32 @@ function UsersPanel() {
         </table>
       </div>
 
+      {filtered.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="text-muted-foreground">
+            Página {safePage} de {totalPages}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!resetUser} onOpenChange={(o) => { if (!o) { setResetUser(null); setNewPassword(""); } }}>
         <DialogContent>
           <DialogHeader>
