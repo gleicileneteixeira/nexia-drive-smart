@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, User, ShieldCheck, ArrowLeft } from "lucide-react";
+import { formatCpf, isValidCpf } from "@/lib/cpf";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
