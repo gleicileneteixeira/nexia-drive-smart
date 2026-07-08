@@ -168,10 +168,14 @@ const EMPLOYMENT_LABELS: Record<string, string> = {
   outro: "Outros",
 };
 
+const PAGE_SIZES = [10, 20, 50, 100] as const;
+
 function UsersPanel() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [resetUser, setResetUser] = useState<ProfileRow | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
