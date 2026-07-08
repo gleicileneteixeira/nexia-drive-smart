@@ -276,13 +276,13 @@ function UsersPanel() {
           <Label htmlFor="search" className="text-xs">Pesquisar</Label>
           <div className="relative">
             <Search className="h-4 w-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input id="search" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nome, e-mail ou telefone" className="pl-8" />
+            <Input id="search" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Nome, e-mail, CPF ou telefone" className="pl-8" />
           </div>
         </div>
         <div className="min-w-[200px]">
           <Label className="text-xs">Situação</Label>
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}
+          <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
             <option value="all">Todas</option>
             <option value="clt">CLT</option>
@@ -291,6 +291,15 @@ function UsersPanel() {
             <option value="trabalha_estuda">Trabalha e Estuda</option>
             <option value="desempregado">Desempregado(a)</option>
             <option value="outro">Outros</option>
+          </select>
+        </div>
+        <div className="min-w-[90px]">
+          <Label className="text-xs">Por página</Label>
+          <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+            {PAGE_SIZES.map((size) => (
+              <option key={size} value={size}>{size}</option>
+            ))}
           </select>
         </div>
         <div className="flex gap-2">
