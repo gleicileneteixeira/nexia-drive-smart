@@ -150,6 +150,7 @@ type ProfileRow = {
   id: string;
   display_name: string | null;
   email: string | null;
+  cpf: string | null;
   phone: string | null;
   employment_status: string | null;
   employment_other: string | null;
