@@ -186,6 +186,11 @@ function AuthPage() {
                 <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
+                <Label htmlFor="cpf">CPF *</Label>
+                <Input id="cpf" required inputMode="numeric" placeholder="000.000.000-00" maxLength={14}
+                  value={formatCpf(cpf)} onChange={(e) => setCpf(e.target.value)} />
+              </div>
+              <div>
                 <Label htmlFor="phone">Telefone *</Label>
                 <Input id="phone" required inputMode="tel" placeholder="(00) 00000-0000"
                   value={phone} onChange={(e) => setPhone(e.target.value)} />
