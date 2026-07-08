@@ -57,8 +57,11 @@ function AuthPage() {
     setErrorMsg(null);
     try {
       if (mode === "signup") {
-        if (!name.trim() || !phone.trim() || !employment) {
+        if (!name.trim() || !cpf.trim() || !phone.trim() || !employment) {
           throw new Error("Preencha todos os campos obrigatórios.");
+        }
+        if (!isValidCpf(cpf)) {
+          throw new Error("CPF inválido. Verifique os números digitados.");
         }
         if (employment === "outro" && !employmentOther.trim()) {
           throw new Error("Descreva sua situação profissional.");
@@ -70,6 +73,7 @@ function AuthPage() {
             emailRedirectTo: window.location.origin,
             data: {
               display_name: name,
+              cpf,
               phone,
               employment_status: employment,
             },
@@ -91,12 +95,18 @@ function AuthPage() {
             id: userId,
             display_name: name,
             email,
+            cpf,
             phone,
             employment_status: employmentToDb[employment] ?? employment,
             employment_other: employment === "outro" ? employmentOther : null,
           });
           if (pErr) {
-            if (pErr.code === "23505") throw new Error("Este e-mail já está cadastrado.");
+            if (pErr.code === "23505") {
+              if (pErr.message?.toLowerCase().includes("cpf")) {
+                throw new Error("Este CPF já está cadastrado. Use outro ou entre em contato com o suporte.");
+              }
+              throw new Error("Este e-mail já está cadastrado. Faça login.");
+            }
             throw pErr;
           }
         }
