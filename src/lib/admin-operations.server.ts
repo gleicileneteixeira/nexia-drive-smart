@@ -12,7 +12,7 @@ function getAdminAuthHeader(): string | null {
 }
 
 export const deleteUser = createServerFn({ method: "POST" })
-  .validator((d: { userId: string }) => d)
+  .inputValidator((d: { userId: string }) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
@@ -21,7 +21,7 @@ export const deleteUser = createServerFn({ method: "POST" })
   });
 
 export const sendPasswordReset = createServerFn({ method: "POST" })
-  .validator((d: { email: string }) => d)
+  .inputValidator((d: { email: string }) => d)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.generateLink({
