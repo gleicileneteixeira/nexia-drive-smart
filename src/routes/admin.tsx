@@ -356,6 +356,7 @@ function UsersPanel() {
             <tr>
               <th className="text-left px-3 py-2">Nome</th>
               <th className="text-left px-3 py-2">E-mail</th>
+              <th className="text-left px-3 py-2">CPF</th>
               <th className="text-left px-3 py-2">Telefone</th>
               <th className="text-left px-3 py-2">Situação</th>
               <th className="text-left px-3 py-2">Cadastro</th>
@@ -363,10 +364,11 @@ function UsersPanel() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((u) => (
+            {paginatedUsers.map((u) => (
               <tr key={u.id} className="border-t border-border/30">
                 <td className="px-3 py-2">{u.display_name ?? "—"}</td>
                 <td className="px-3 py-2">{u.email ?? "—"}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{u.cpf ?? "—"}</td>
                 <td className="px-3 py-2">{u.phone ?? "—"}</td>
                 <td className="px-3 py-2">
                   {u.employment_status === "outro"
@@ -393,7 +395,7 @@ function UsersPanel() {
               </tr>
             ))}
             {!isLoading && filtered.length === 0 && (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
+              <tr><td colSpan={7} className="text-center text-muted-foreground py-6">Nenhum usuário encontrado.</td></tr>
             )}
           </tbody>
         </table>
