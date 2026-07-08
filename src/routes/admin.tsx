@@ -232,6 +232,7 @@ function UsersPanel() {
     return filtered.map((u) => ({
       Nome: u.display_name ?? "",
       "E-mail": u.email ?? "",
+      CPF: u.cpf ?? "",
       Telefone: u.phone ?? "",
       "Situação profissional":
         u.employment_status === "outro"
