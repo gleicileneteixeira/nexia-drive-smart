@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Upload, Trash2, Pencil, LogOut, ArrowLeft, Search, Download, Users, KeyRound, UserX } from "lucide-react";
+import { Loader2, Upload, Trash2, Pencil, LogOut, ArrowLeft, Search, Download, Users, KeyRound, UserX, Star } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useServerFn } from "@tanstack/react-start";
@@ -105,12 +105,16 @@ function AdminDashboard({ email, onSignOut }: { email: string | null; onSignOut:
       </div>
 
       <Tabs defaultValue="users">
-        <TabsList className="grid grid-cols-2 w-full max-w-md">
+        <TabsList className="grid grid-cols-3 w-full max-w-lg">
           <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" /> Usuários</TabsTrigger>
           <TabsTrigger value="library" className="gap-2"><Upload className="h-4 w-4" /> Biblioteca</TabsTrigger>
+          <TabsTrigger value="ratings" className="gap-2"><Star className="h-4 w-4" /> Avaliações</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-4">
           <UsersPanel />
+        </TabsContent>
+        <TabsContent value="ratings" className="mt-4">
+          <RatingsPanel />
         </TabsContent>
         <TabsContent value="library" className="mt-4 space-y-6">
           <ItemForm
@@ -621,5 +625,145 @@ function ItemForm({ editing, onDone }: { editing: LibraryItem | null; onDone: ()
         {editing ? "Salvar alterações" : "Adicionar à biblioteca"}
       </Button>
     </form>
+  );
+}
+
+type RatingRow = {
+  user_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function RatingsPanel() {
+  const { data: ratings = [], isLoading } = useQuery({
+    queryKey: ["admin", "ratings"],
+    queryFn: async (): Promise<Array<RatingRow & { display_name: string | null; email: string | null }>> => {
+      const { data: r, error } = await supabase
+        .from("app_ratings")
+        .select("user_id, rating, comment, created_at, updated_at")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      const rows = (r ?? []) as RatingRow[];
+      if (rows.length === 0) return [];
+      const ids = rows.map((x) => x.user_id);
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, display_name, email")
+        .in("id", ids);
+      const byId = new Map((profs ?? []).map((p) => [p.id, p]));
+      return rows.map((row) => ({
+        ...row,
+        display_name: byId.get(row.user_id)?.display_name ?? null,
+        email: byId.get(row.user_id)?.email ?? null,
+      }));
+    },
+  });
+  const [filter, setFilter] = useState<number | "all">("all");
+
+  const total = ratings.length;
+  const avg = total > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / total : 0;
+  const dist = [5, 4, 3, 2, 1].map((n) => ({
+    n,
+    count: ratings.filter((r) => r.rating === n).length,
+  }));
+  const filtered = filter === "all" ? ratings : ratings.filter((r) => r.rating === filter);
+
+  function exportXlsx() {
+    const rows = filtered.map((r) => ({
+      Nome: r.display_name ?? "",
+      Email: r.email ?? "",
+      Nota: r.rating,
+      Comentário: r.comment ?? "",
+      "Atualizado em": new Date(r.updated_at).toLocaleString("pt-BR"),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Avaliações");
+    XLSX.writeFile(wb, `avaliacoes-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="glass rounded-2xl p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Média geral</p>
+          <p className="text-3xl font-display font-bold flex items-center gap-2 mt-1">
+            {avg.toFixed(1)}
+            <Star className="h-6 w-6 fill-warning text-warning" />
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">{total} avaliação{total === 1 ? "" : "ões"}</p>
+        </div>
+        <div className="glass rounded-2xl p-4 md:col-span-2">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Distribuição</p>
+          <div className="space-y-1.5">
+            {dist.map((d) => {
+              const pct = total > 0 ? (d.count / total) * 100 : 0;
+              return (
+                <div key={d.n} className="flex items-center gap-2 text-xs">
+                  <span className="w-8 text-right font-semibold">{d.n}★</span>
+                  <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+                    <div className="h-full bg-warning" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="w-8 text-muted-foreground">{d.count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Select value={String(filter)} onValueChange={(v) => setFilter(v === "all" ? "all" : Number(v))}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as notas</SelectItem>
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n} estrela{n > 1 ? "s" : ""}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">{filtered.length} resultado{filtered.length === 1 ? "" : "s"}</span>
+          </div>
+          <Button size="sm" variant="outline" onClick={exportXlsx} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> Exportar Excel
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          {filtered.map((r) => (
+            <div key={r.user_id} className="p-3 rounded-xl bg-background/50 border border-border/40">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm truncate">{r.display_name ?? "Sem nome"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{r.email ?? "—"}</p>
+                </div>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star key={n} className={`h-4 w-4 ${n <= r.rating ? "fill-warning text-warning" : "text-muted-foreground/30"}`} />
+                  ))}
+                </div>
+              </div>
+              {r.comment && (
+                <p className="mt-2 text-sm text-foreground/90 whitespace-pre-wrap">{r.comment}</p>
+              )}
+              <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                {new Date(r.updated_at).toLocaleString("pt-BR")}
+              </p>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">Nenhuma avaliação ainda.</p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

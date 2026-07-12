@@ -26,6 +26,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { Placa } from "@/components/Placa";
+import { triggerRatingPrompt } from "@/components/RatingPrompt";
 
 export const Route = createFileRoute("/simulado")({
   component: SimuladoPage,
@@ -134,6 +135,13 @@ function SimuladoPage() {
   const [showResult, setShowResult] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+
+  // Dispara pedido de avaliação 2s após terminar o simulado
+  useEffect(() => {
+    if (!showResult) return;
+    const t = setTimeout(() => triggerRatingPrompt("simulado-done"), 2000);
+    return () => clearTimeout(t);
+  }, [showResult]);
 
   // Hidrata estado a partir do localStorage
   useEffect(() => {
