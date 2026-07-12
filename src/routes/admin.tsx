@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Upload, Trash2, Pencil, LogOut, ArrowLeft, Search, Download, Users, KeyRound, UserX } from "lucide-react";
+import { Loader2, Upload, Trash2, Pencil, LogOut, ArrowLeft, Search, Download, Users, KeyRound, UserX, Star } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useServerFn } from "@tanstack/react-start";
@@ -105,12 +105,16 @@ function AdminDashboard({ email, onSignOut }: { email: string | null; onSignOut:
       </div>
 
       <Tabs defaultValue="users">
-        <TabsList className="grid grid-cols-2 w-full max-w-md">
+        <TabsList className="grid grid-cols-3 w-full max-w-lg">
           <TabsTrigger value="users" className="gap-2"><Users className="h-4 w-4" /> Usuários</TabsTrigger>
           <TabsTrigger value="library" className="gap-2"><Upload className="h-4 w-4" /> Biblioteca</TabsTrigger>
+          <TabsTrigger value="ratings" className="gap-2"><Star className="h-4 w-4" /> Avaliações</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-4">
           <UsersPanel />
+        </TabsContent>
+        <TabsContent value="ratings" className="mt-4">
+          <RatingsPanel />
         </TabsContent>
         <TabsContent value="library" className="mt-4 space-y-6">
           <ItemForm
