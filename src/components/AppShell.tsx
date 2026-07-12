@@ -2,7 +2,8 @@ import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 import { RequireAuth } from "./RequireAuth";
 import { ProfilePrompt } from "./ProfilePrompt";
-import { Flame, Home, Sparkles, Zap, Trophy, TrafficCone, Brain, Library, LogIn, LogOut, UserCircle, Shield } from "lucide-react";
+import { RatingPrompt, triggerRatingPrompt } from "./RatingPrompt";
+import { Flame, Home, Sparkles, Zap, Trophy, TrafficCone, Brain, Library, LogIn, LogOut, UserCircle, Shield, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -91,6 +92,13 @@ export function AppShell() {
                       Admin
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => triggerRatingPrompt("manual")}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Star className="h-4 w-4" />
+                    Avaliar o app
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
                     <LogOut className="h-4 w-4" />
@@ -142,6 +150,13 @@ export function AppShell() {
                         Admin
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => triggerRatingPrompt("manual")}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <Star className="h-4 w-4" />
+                      Avaliar o app
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
                       <LogOut className="h-4 w-4" />
@@ -163,6 +178,7 @@ export function AppShell() {
       </header>
 
       <ProfilePrompt />
+      <RatingPrompt />
 
       <main className="flex-1">
         {pathname === "/auth" || pathname === "/reset-password" ? (
