@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       library_items: {
         Row: {
           cover_url: string | null

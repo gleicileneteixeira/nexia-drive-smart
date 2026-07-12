@@ -1,86 +1,63 @@
-# Plano: cadastro com CPF + completar dados + paginação admin
+## Avaliação por estrelas do app
 
-## 1. Resumo
-- Incluir **CPF** no cadastro e garantir que seja único.
-- Criar tela obrigatória **"Complete seu cadastro para continuar"** para novos e antigos usuários preencherem telefone, CPF e situação profissional.
-- No painel admin, adicionar **paginação** na listagem de usuários com opções de 10, 20, 50 e 100 por página.
+Adicionar um pedido de avaliação (1 a 5 estrelas + comentário opcional) que aparece ao usuário em momentos estratégicos e fica salvo no banco para você acompanhar no admin.
 
-## 2. O que muda para o usuário
+### Quando aparece
+Um modal discreto (não bloqueia o app, pode fechar com "Agora não") disparado quando **qualquer** destas condições acontecer, a primeira que bater:
 
-### Cadastro novo
-- Novo campo **CPF**, obrigatório, com máscara `000.000.000-00`.
-- Validação de CPF (dígitos verificadores + bloqueio de sequências inválidas como `111.111.111-11`).
-- Erro claro se o CPF já estiver cadastrado.
+1. Ao **terminar um simulado** (na tela de resultado), depois de 2 segundos.
+2. Ao **navegar entre abas** (ex.: sair do Simulado e ir para Placas) — só depois que o usuário já usou o app por pelo menos ~1 minuto na sessão.
+3. Como fallback, no **login**, se já se passaram 3+ dias desde o cadastro e ainda não avaliou.
 
-### Ao entrar no app
-- Se faltar **nome, telefone, CPF ou situação profissional**, aparece a tela:
-  - **"Complete seu cadastro para continuar"**
-  - Todos os dados já cadastrados aparecem para edição.
-  - E-mail fica em modo leitura.
-  - Campos faltantes são destacados.
-  - Sem botão "Depois" — só libera o app após salvar.
+Regras para não ser chato:
+- Nunca aparece mais de 1 vez por sessão.
+- Se o usuário clicar "Agora não" ou fechar → volta a perguntar só depois de 3 dias.
+- Se o usuário **avaliar**, nunca mais aparece (fica registrado que já avaliou). Fica disponível um link "Editar minha avaliação" no menu da conta caso ele queira mudar.
+
+### Tela do modal
+```text
+┌─────────────────────────────────────┐
+│  Como está sua experiência?         │
+│  Sua nota ajuda a melhorar o app.   │
+│                                     │
+│      ☆  ☆  ☆  ☆  ☆                  │
+│                                     │
+│  Comentário (opcional)              │
+│  [                              ]   │
+│                                     │
+│  [ Agora não ]     [ Enviar ]       │
+└─────────────────────────────────────┘
+```
+Estrelas com hover/tap, obrigatório escolher pelo menos 1 para habilitar "Enviar".
 
 ### Painel admin
-- Nova coluna **CPF** na tabela e no export Excel/CSV.
-- Paginação com opções: **10, 20, 50, 100** usuários por página.
-- Controles: página anterior/próxima, indicador "Página X de Y".
+Nova aba/seção **"Avaliações"** mostrando:
+- Média geral (ex.: 4,3 ★) e total de avaliações.
+- Distribuição por nota (quantos deram 5, 4, 3, 2, 1).
+- Lista com nome, e-mail, nota, comentário e data — com filtro por nota e export para Excel.
 
-## 3. Diagrama da tela "Complete seu cadastro"
+### Detalhes técnicos
 
-```text
-┌─────────────────────────────────────────┐
-│  Complete seu cadastro                  │
-│  Para continuar, preencha os campos     │
-│  abaixo. Você pode editar os dados já   │
-│  cadastrados.                           │
-│                                         │
-│  Nome completo *                        │
-│  [ Maria Silva                  ]       │
-│                                         │
-│  E-mail (não editável)                  │
-│  [ maria@email.com              ] 🔒    │
-│                                         │
-│  CPF *                                  │
-│  [ 000.000.000-00               ] ⚠    │
-│                                         │
-│  Telefone *                             │
-│  [ (00) 00000-0000              ]       │
-│                                         │
-│  Situação profissional *                │
-│  [ Selecione…                ▾  ] ⚠    │
-│                                         │
-│       [   Salvar e continuar   ]        │
-└─────────────────────────────────────────┘
-```
+**Banco de dados (migração)**
+- Nova tabela `app_ratings` com `user_id` (único — 1 avaliação por usuário, permite update), `rating` (1–5), `comment` (texto opcional), `created_at`, `updated_at`.
+- RLS: usuário lê/insere/atualiza a própria avaliação; admin lê todas (via `has_role`).
+- GRANTs para `authenticated` e `service_role`.
+- Nova tabela `app_rating_prompts` (ou coluna em `profiles`) para lembrar `last_prompted_at` e `dismissed_count` — usado para respeitar o "3 dias".
 
-## 4. Detalhes técnicos
+**Frontend**
+- Novo componente `src/components/RatingPrompt.tsx` montado no `AppShell` (assim vale para qualquer rota).
+- Hook `useRatingPrompt()` que decide se deve abrir, com base em:
+  - Já avaliou? (consulta `app_ratings`)
+  - Último prompt? (consulta `app_rating_prompts`)
+  - Evento que disparou (fim de simulado / troca de aba / login).
+- `simulado.tsx`: ao entrar na tela `done`, dispara evento `rating:trigger` (via callback do hook).
+- `AppShell.tsx`: observa mudança de `pathname` para disparar o gatilho de "troca de aba" (com timer de sessão).
+- `AppShell.tsx`: adiciona item "Avaliar o app" no dropdown da conta, para o usuário abrir manualmente / editar nota.
 
-### Banco de dados
-- Adicionar **índice único parcial** em `profiles.cpf` para bloquear CPF duplicado sem quebrar perfis antigos sem CPF.
-- Atualizar trigger `handle_new_user` para capturar `cpf` do `raw_user_meta_data`.
+**Admin (`src/routes/admin.tsx`)**
+- Nova aba "Avaliações" com os cards de média, distribuição e tabela paginada (reaproveita o padrão de paginação já existente).
 
-### Validação de CPF
-- Criar utilitário `src/lib/cpf.ts` com máscara, limpeza e validação de dígitos verificadores.
-
-### Cadastro (`src/routes/auth.tsx`)
-- Adicionar campo CPF obrigatório com máscara.
-- Enviar CPF no `signUp options.data.cpf`.
-- Tratar erro `23505` (CPF ou e-mail duplicado) com mensagem amigável.
-
-### Tela de completar cadastro (`src/components/ProfilePrompt.tsx`)
-- Buscar `display_name, email, cpf, phone, employment_status, employment_other`.
-- Mostrar todos os campos; e-mail desabilitado.
-- Validar CPF antes de salvar.
-- Não permitir fechar sem salvar.
-- Reabrir automaticamente se dados continuarem incompletos.
-
-### Painel admin (`src/routes/admin.tsx`)
-- Adicionar estado de paginação: `page` e `pageSize` (10, 20, 50, 100).
-- Calcular `paginatedUsers` a partir de `filtered`.
-- Adicionar seletor de itens por página e botões de navegação.
-- Adicionar coluna CPF na tabela e nos exports.
-
-## 5. Fora do escopo
-- Não altera login/senha.
-- Não altera papéis (admin).
-- Não valida CPF na Receita Federal — apenas formato e dígitos verificadores.
+### Fora do escopo
+- Não publica avaliações em loja externa (App Store/Play Store).
+- Não envia e-mail nem push pedindo avaliação.
+- Não implementa moderação de comentários (admin apenas visualiza).
