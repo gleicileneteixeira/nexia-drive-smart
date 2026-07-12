@@ -26,6 +26,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { Placa } from "@/components/Placa";
+import { triggerRatingPrompt } from "@/components/RatingPrompt";
 
 export const Route = createFileRoute("/simulado")({
   component: SimuladoPage,
