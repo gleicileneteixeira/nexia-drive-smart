@@ -637,6 +637,23 @@ type RatingRow = {
 };
 
 function RatingsPanel() {
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
+  function withinDateRange(iso: string): boolean {
+    if (!dateFrom && !dateTo) return true;
+    const t = new Date(iso).getTime();
+    if (dateFrom) {
+      const from = new Date(dateFrom + "T00:00:00").getTime();
+      if (t < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + "T23:59:59").getTime();
+      if (t > to) return false;
+    }
+    return true;
+  }
+
   const { data: ratings = [], isLoading } = useQuery({
     queryKey: ["admin", "ratings"],
     queryFn: async (): Promise<Array<RatingRow & { display_name: string | null; email: string | null }>> => {
@@ -662,13 +679,15 @@ function RatingsPanel() {
   });
   const [filter, setFilter] = useState<number | "all">("all");
 
-  const total = ratings.length;
-  const avg = total > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / total : 0;
+  const dateFilteredRatings = ratings.filter((r) => withinDateRange(r.updated_at));
+  const total = dateFilteredRatings.length;
+  const avg = total > 0 ? dateFilteredRatings.reduce((s, r) => s + r.rating, 0) / total : 0;
   const dist = [5, 4, 3, 2, 1].map((n) => ({
     n,
-    count: ratings.filter((r) => r.rating === n).length,
+    count: dateFilteredRatings.filter((r) => r.rating === n).length,
   }));
-  const filtered = filter === "all" ? ratings : ratings.filter((r) => r.rating === filter);
+  const filtered =
+    filter === "all" ? dateFilteredRatings : dateFilteredRatings.filter((r) => r.rating === filter);
 
   function exportXlsx() {
     const rows = filtered.map((r) => ({
@@ -690,6 +709,42 @@ function RatingsPanel() {
 
   return (
     <div className="space-y-4">
+      <div className="glass rounded-2xl p-4 flex flex-wrap items-end gap-3">
+        <div>
+          <Label className="text-xs">De</Label>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-40"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Até</Label>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-40"
+          />
+        </div>
+        {(dateFrom || dateTo) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Limpar filtro
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground ml-auto">
+          Filtro de data aplica em avaliações e contribuições.
+        </p>
+      </div>
+
       <div className="grid gap-3 md:grid-cols-3">
         <div className="glass rounded-2xl p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Média geral</p>
@@ -764,6 +819,153 @@ function RatingsPanel() {
           )}
         </div>
       </div>
+
+      <ContributionsPanel dateFrom={dateFrom} dateTo={dateTo} />
+    </div>
+  );
+}
+
+type ContributionRow = {
+  id: string;
+  user_id: string;
+  clicked_at: string;
+};
+
+function ContributionsPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  const { data: clicks = [], isLoading } = useQuery({
+    queryKey: ["admin", "contribution_clicks"],
+    queryFn: async (): Promise<Array<ContributionRow & { display_name: string | null; email: string | null }>> => {
+      const { data: rows, error } = await supabase
+        .from("contribution_clicks")
+        .select("id, user_id, clicked_at")
+        .order("clicked_at", { ascending: false });
+      if (error) throw error;
+      const list = (rows ?? []) as ContributionRow[];
+      if (list.length === 0) return [];
+      const ids = Array.from(new Set(list.map((r) => r.user_id)));
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, display_name, email")
+        .in("id", ids);
+      const byId = new Map((profs ?? []).map((p) => [p.id, p]));
+      return list.map((row) => ({
+        ...row,
+        display_name: byId.get(row.user_id)?.display_name ?? null,
+        email: byId.get(row.user_id)?.email ?? null,
+      }));
+    },
+  });
+
+  function within(iso: string): boolean {
+    if (!dateFrom && !dateTo) return true;
+    const t = new Date(iso).getTime();
+    if (dateFrom && t < new Date(dateFrom + "T00:00:00").getTime()) return false;
+    if (dateTo && t > new Date(dateTo + "T23:59:59").getTime()) return false;
+    return true;
+  }
+
+  const filtered = clicks.filter((c) => within(c.clicked_at));
+  const total = filtered.length;
+  const now = Date.now();
+  const last7 = filtered.filter(
+    (c) => now - new Date(c.clicked_at).getTime() < 1000 * 60 * 60 * 24 * 7,
+  ).length;
+  const uniqueUsers = new Set(filtered.map((c) => c.user_id)).size;
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  function exportXlsx() {
+    const rows = filtered.map((c) => ({
+      Nome: c.display_name ?? "",
+      Email: c.email ?? "",
+      "Data do clique": new Date(c.clicked_at).toLocaleString("pt-BR"),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Contribuições");
+    XLSX.writeFile(wb, `contribuicoes-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  return (
+    <div className="glass rounded-2xl p-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <Heart className="h-4 w-4 text-pink-500" />
+        <h2 className="font-display font-bold">Histórico de Cliques em Contribuição</h2>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-xl p-3 bg-background/50 border border-border/40">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Total de cliques</p>
+          <p className="text-2xl font-display font-bold mt-1">{total}</p>
+        </div>
+        <div className="rounded-xl p-3 bg-background/50 border border-border/40">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Últimos 7 dias</p>
+          <p className="text-2xl font-display font-bold mt-1">{last7}</p>
+        </div>
+        <div className="rounded-xl p-3 bg-background/50 border border-border/40">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Usuários únicos</p>
+          <p className="text-2xl font-display font-bold mt-1">{uniqueUsers}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Por página</Label>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+            className="flex h-9 rounded-md border border-input bg-transparent px-2 py-1 text-sm"
+          >
+            {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <Button size="sm" variant="outline" onClick={exportXlsx} disabled={filtered.length === 0}>
+          <Download className="h-4 w-4 mr-2" /> Exportar Excel
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border border-border/40">
+        <table className="w-full text-sm">
+          <thead className="bg-background/50 text-xs uppercase text-muted-foreground">
+            <tr>
+              <th className="text-left px-3 py-2">Nome</th>
+              <th className="text-left px-3 py-2">E-mail</th>
+              <th className="text-left px-3 py-2">Data / Hora do clique</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginated.map((c) => (
+              <tr key={c.id} className="border-t border-border/30">
+                <td className="px-3 py-2">{c.display_name ?? "—"}</td>
+                <td className="px-3 py-2">{c.email ?? "—"}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{new Date(c.clicked_at).toLocaleString("pt-BR")}</td>
+              </tr>
+            ))}
+            {!isLoading && filtered.length === 0 && (
+              <tr><td colSpan={3} className="text-center text-muted-foreground py-6">Nenhum clique registrado ainda.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <div className="text-muted-foreground">Página {safePage} de {totalPages}</div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>
+              Anterior
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages}>
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
