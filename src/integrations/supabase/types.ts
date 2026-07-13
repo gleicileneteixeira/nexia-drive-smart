@@ -38,6 +38,24 @@ export type Database = {
         }
         Relationships: []
       }
+      contribution_clicks: {
+        Row: {
+          clicked_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          clicked_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       library_items: {
         Row: {
           cover_url: string | null
